@@ -1,6 +1,6 @@
 /*
 
-
+search for 'clash' to resolve issues
 
 Note Note Note Note Note Note
 
@@ -50,18 +50,19 @@ static void SPI0_init(void);
 // end declarations
 
 // define the DC power control pin which is used to drive the gate of the solid state relay
-#define power_pin 2 // changed from pin 7 to 2 in the box
+#define power_pin 2   // clash with encoder A_PHASE
 
 // pin definitions for step, dir and enable
 
-#define stepPin 11
-#define dirPin 10
+#define stepPin 11  // no clash with encoder
+#define dirPin 10  // clash with encoder camerapower
 
 // meaningful names for the serial ports
 #define Monitor Serial2
 #define ASCOM Serial
 #define Encoder Serial1
-#define ledpin 3
+#define ledpin 3  // no clash with encoder
+
 // Define a stepper and the pins it will use
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
