@@ -10,6 +10,16 @@ This project is the Code for the new (1-5-23) control box (stepper and encoder f
 Note Note Note Note Note Note
 */
 
+/*
+
+AVR4809 pinout for the control box - see the google sheet 
+
+https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMCbDc/edit#gid=0
+
+*/
+
+
+
 //
 // see this sheets URL for values related to deceleration used to inform values in this code
 // https://docs.google.com/spreadsheets/d/1IBvHXLke9fBvjETHgyCWAYHGpPX9WbbuqvsiXYv9Ix0/edit#gid=0
@@ -48,19 +58,24 @@ bool checkForValidAzimuth();
 static void SPI0_init(void);
 
 // end declarations
+// defines for the encoder inclusion
+#define power_pin 2   
+#define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt todo check that these pins will work as interrupts
+#define B_PHASE 5
+#define CameraPower 6  // power for the imaging camera
+#define dirPin 10  // connection for motor direction signal
+#define stepPin 11  // connection for motor step signal
 
-// define the DC power control pin which is used to drive the gate of the solid state relay
-#define power_pin 2   // clash with encoder A_PHASE
-
-// pin definitions for step, dir and enable
-
-#define stepPin 11  // no clash with encoder
-#define dirPin 10  // clash with encoder camerapower
+#define EncoderledPin 14  // led flash for a function to be defined in control box
+#define EastPin 28        // sync connection for dome
+//
+#define off false
+#define on true
 
 // meaningful names for the serial ports
 #define Monitor Serial2
 #define ASCOM Serial
-#define Encoder Serial1
+
 #define ledpin 3  // no clash with encoder
 
 // Define a stepper and the pins it will use
@@ -97,11 +112,22 @@ String pkversion = "6.0";
 
 void setup()
 {
-
+//Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
   digitalWrite(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
   pinMode(9, INPUT_PULLUP);     // see the notes in github. this pulls up the serial Rx pin to 5v.
   pinMode(ledpin, OUTPUT);
+
+
+// Pin modes for the encoder
+
+
+  pinMode(EastPin, INPUT_PULLUP);
+
+
+  pinMode(EncoderledPin, OUTPUT);
+  pinMode(CameraPower, OUTPUT);
+
 
   stepper.stop(); // set initial state as stopped
 
@@ -124,7 +150,7 @@ void setup()
   homeSensor = false;          // this later set in the getcurrentazimuth() spi transaction
 
   ASCOM.begin(19200);   // start serial ports ASCOM driver - usb with PC - rx0 tx0 and updi
-  Encoder.begin(19200); // Link with the Encoder MCU
+  
   Monitor.begin(19200); // serial with the Monitor program
 
   lightup(); // 10 SECOND DELAY flash Led to indicate reset when the box lid is off for testing
