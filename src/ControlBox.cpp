@@ -35,12 +35,13 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 //
 //  The routine drives the stepper motor to move the Dome
 //  It acquires the current azimuth via hardware serial from the encoder
-
+//  todo - the former spi transaction included a flag for the home position which was set in eastsync() - need to perhaps put this into westsync()
+//  as there is no eastsync in the observatory
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
 #include "linkedList.h"
-#include <SPI.h> // Stepper is SPI master
+
 
 // Forward declarations
 
@@ -55,7 +56,11 @@ void PowerOff();
 void resetViaSWR();
 void lightup();
 bool checkForValidAzimuth();
-static void SPI0_init(void);
+
+uint16_t encoder();
+bool PowerForCamera(bool State);
+void interrupt();
+void EastSync();
 
 // end declarations
 // defines for the encoder inclusion
@@ -105,6 +110,15 @@ String QueryDir = "No Direction";
 String movementstate = "Not Moving";
 String pkversion = "6.0";
 
+volatile long A_Counter; // volatile because it's used in the interrupt routine
+float Azimuth;           // The data type is important to avoid integer arithmetic in the encoder() routine
+uint16_t integerAzimuth; // this is what is returned from the encoder routine
+                         // and also because we really don't need fractional degrees for dome movement.
+float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the number of encoder wheel rotations for one dome rev. 11-9-21
+
+bool cameraPowerState = off;
+
+
 /*
   --------------------------------------------------------------------------------------------------------------------------------------------
   --------------------------------------------------------------------------------------------------------------------------------------------
@@ -128,6 +142,27 @@ void setup()
   pinMode(EncoderledPin, OUTPUT);
   pinMode(CameraPower, OUTPUT);
 
+  //turn the camera power of at startup:
+  digitalWrite (CameraPower, LOW);           //  LOW is camera power OFF
+
+ // encoder:
+  pinMode(A_PHASE, INPUT_PULLUP);
+  pinMode(B_PHASE, INPUT_PULLUP);
+
+
+
+  // pins 2,3,18,19,20,21 are the only pins available to use with interrupts on the mega2560 (no pin limit)restrictions on 4809)
+  attachInterrupt(digitalPinToInterrupt(A_PHASE), interrupt, RISING); // interrupt for the encoder device
+
+  // interupts for the azimuth syncs below
+  
+  attachInterrupt(digitalPinToInterrupt(EastPin), EastSync, RISING);
+
+  A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 for the dome when the scope is at 270.
+
+  PowerForCamera(off); // camera power is off by default
+
+
 
   stepper.stop(); // set initial state as stopped
 
@@ -147,7 +182,7 @@ void setup()
   monitorTimerInterval = millis();
   azimuthTimerInterval = millis();
 
-  homeSensor = false;          // this later set in the getcurrentazimuth() spi transaction
+  homeSensor = false;          // this later set in the getcurrentazimuth() spi transaction todo find out about how this works
 
   ASCOM.begin(19200);   // start serial ports ASCOM driver - usb with PC - rx0 tx0 and updi
   
@@ -158,13 +193,9 @@ void setup()
 
   // ASCOM.println(" before get azimuth");
 
-  // this code below os placed in this sequence for a good reason
-  SPI0_init();
-  digitalWrite(SS, HIGH); // Set SS high
-  SPI.begin();            // sets up the SPI hardware
-  delay(100);             // for SPI to setup
 
-  TargetAzimuth = getCurrentAzimuth(); // uses SPI
+
+  TargetAzimuth = getCurrentAzimuth(); // todo - check that a valid azimuth is returned
 
   initialiseCDArray();
 
@@ -377,7 +408,7 @@ if (homing)
 {
   if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
   {
-    getCurrentAzimuth();                      // The spi transaction gets the homesensor state
+    getCurrentAzimuth();                      // The spi transaction gets the homesensor state todo find out
     azimuthTimerInterval = millis();
     //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
     //ASCOM.println(homeSensor);
@@ -478,66 +509,8 @@ void WithinFiveDegrees()
 
 int getCurrentAzimuth()
 {
-  char trigger;
-  uint16_t azimuth;
-
-  byte LB;    // holds the low byte returned from slave
-  byte HB;    // ditto highbyte
-  byte dummy; // used for 1st SPI transfer in the sequence
-
-  boolean validaz = false;
-
-  while (validaz == false)
-  {
-
-    // do the SPI transactions here
-    // configure the SPI settings
-    SPI.beginTransaction(SPISettings(2000000, LSBFIRST, SPI_MODE0)); // 2 meg clock changed from MSBFIRST to SB....because the microchip example sets that up in slave
-
-    // enable Slave Select
-    digitalWrite(SS, LOW); // SS is active LOW
-
-    trigger = 'A';
-    dummy = SPI.transfer(trigger); // this returns whatever happened to be in the SPDR
-    delayMicroseconds(20);         // propagation delay required by SPI
-
-    trigger = 'L';
-    LB = SPI.transfer(trigger); // this returns the low byte
-    delayMicroseconds(20);      // propagation delay required by SPI
-
-    trigger = 'H';
-    HB = SPI.transfer(trigger); // this returns the high byte
-    delayMicroseconds(20);      // propagation delay required by SPI
-
-    trigger = 'S';
-    homeSensor = SPI.transfer(trigger);
-    delayMicroseconds(20); // propagation delay required by SPI
-
-    digitalWrite(SS, HIGH); // disable Slave Select
-
-    // turn SPI hardware off
-    SPI.endTransaction(); // transaction over
-
-    SPI.end();
-    azimuth = (HB << 8) | LB; // push the highbyte value 8 bits left to occupy the high 8 bits of the 16 bit int
-
-    if ((azimuth >= 0) && (azimuth <= 360)) // changed >0 to >= 0 and also from 359 to 360 as part of SPI work
-    {
-      validaz = true;
-      EncoderReplyCounter++;         // A counter used to indicate whether the encoder has replied with a valid azimuth
-      if (EncoderReplyCounter > 999) // reset to zero periodicaly
-      {
-        EncoderReplyCounter = 0;
-      } // endif
-    }   // endif
-
-  } // endwhile validaz
-
-  // todo - remove the test serial prints - two lines below  these were used to test the SPI data returns
-  // ASCOM.print ("the azimuth is ");
-  // ASCOM.println(azimuth);
-
-  return azimuth;
+   encoder();
+  return integerAzimuth;
 
 } // end getCurrentAzimuth()
 
@@ -584,7 +557,7 @@ void SendToMonitor()
       Monitor.print(TargetMessage                + '#');
       */
 
-    CurrentAzimuth = getCurrentAzimuth(); // uses SPI
+    CurrentAzimuth = getCurrentAzimuth(); 
 
     Monitor.print(String(CDArray[CurrentAzimuth]) + '#' + String(EncoderReplyCounter) + '#'); // in the monitor program this is called distance to target
 
@@ -644,16 +617,75 @@ bool checkForValidAzimuth()
   }
 }
 
-static void SPI0_init(void)
-{
-  PORTA.DIR |= PIN4_bm;  /* Set MOSI pin direction to output */
-  PORTA.DIR &= ~PIN5_bm; /* Set MISO pin direction to input */
-  PORTA.DIR |= PIN6_bm;  /* Set SCK pin direction to output */
-  PORTA.DIR |= PIN7_bm;  /* Set SS pin direction to output */
 
-  SPI0.CTRLA = SPI_CLK2X_bm          /* Enable double-speed */
-               | SPI_DORD_bm         /* LSB is transmitted first */
-               | SPI_ENABLE_bm       /* Enable module */
-               | SPI_MASTER_bm       /* SPI module in Master mode */
-               | SPI_PRESC_DIV16_gc; /* System Clock divided by 16 */
+uint16_t encoder()
+{
+  // Encoder:
+
+  if (A_Counter < 0)
+  {
+    A_Counter = A_Counter + ticksperDomeRev; // set the counter floor value
+  }
+
+  if (A_Counter > ticksperDomeRev) // set the counter ceiling value
+  {
+    A_Counter = A_Counter - ticksperDomeRev;
+  }
+
+  Azimuth = float(A_Counter) / (ticksperDomeRev / 360.0); // (ticks for one dome rev) / 360 (degrees) - about 29
+  // i.e number of ticks per degree
+
+  // some error checking
+  if (Azimuth < 1)
+  {
+    Azimuth = 1.0;
+  }
+
+  if (Azimuth > 360.0)
+  {
+    Azimuth = 360.0;
+  }
+
+  integerAzimuth = Azimuth; // REMEMBER Azimuth needs to be float due to effects of integer arithmetic.
+  return integerAzimuth;
+} // end void encoder
+
+
+bool PowerForCamera(bool State)
+{
+  if (State)
+  {
+    digitalWrite(CameraPower, HIGH);  //
+    cameraPowerState = on;
+  }
+  else
+  {
+    digitalWrite(CameraPower, LOW); //NB as above
+    cameraPowerState = off;
+  }
+}
+
+void interrupt() // Interrupt function
+{
+
+  char i, j;
+  i = digitalRead(B_PHASE);
+  j = digitalRead(A_PHASE);
+  if (i == j)
+  {
+    A_Counter -= 1;
+  }
+
+  else
+  {
+
+    A_Counter += 1; // increment the counter which represents increasing dome angle
+
+  } // end else clause
+} // end void interrupt
+
+
+void EastSync()
+{
+  A_Counter = ticksperDomeRev / 4.0;
 }
