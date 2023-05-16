@@ -18,7 +18,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 
 */
 
-
+// todo change the occurences of eastsync to westsync - as thats where the hall sensor is located
 
 //
 // see this sheets URL for values related to deceleration used to inform values in this code
@@ -60,7 +60,7 @@ bool checkForValidAzimuth();
 uint16_t encoder();
 bool PowerForCamera(bool State);
 void interrupt();
-void EastSync();
+void WestSync();
 
 // end declarations
 // defines for the encoder inclusion
@@ -72,7 +72,7 @@ void EastSync();
 #define stepPin 11  // connection for motor step signal
 
 #define EncoderledPin 14  // led flash for a function to be defined in control box
-#define EastPin 28        // sync connection for dome
+#define WestPin 28        // sync connection for dome
 //
 #define off false
 #define on true
@@ -136,7 +136,7 @@ void setup()
 // Pin modes for the encoder
 
 
-  pinMode(EastPin, INPUT_PULLUP);
+  pinMode(WestPin, INPUT_PULLUP);
 
 
   pinMode(EncoderledPin, OUTPUT);
@@ -156,7 +156,7 @@ void setup()
 
   // interupts for the azimuth syncs below
   
-  attachInterrupt(digitalPinToInterrupt(EastPin), EastSync, RISING);
+  attachInterrupt(digitalPinToInterrupt(WestPin), WestSync, RISING);
 
   A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 for the dome when the scope is at 270.
 
@@ -685,7 +685,9 @@ void interrupt() // Interrupt function
 } // end void interrupt
 
 
-void EastSync()
+void WestSync()
 {
+  // this routine is called when the westsync interrupt fires
   A_Counter = ticksperDomeRev / 4.0;
+  homeSensor==true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
 }
