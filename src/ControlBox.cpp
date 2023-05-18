@@ -230,13 +230,16 @@ void loop()
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
-    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   //this will be received from the monitor program
+    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet with all the monitoring data
     {
       Monitor.print(dataPacket);
     }
-
+    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request
+    {
+      ASCOM.print("monitorcontrol#");
+    }
     
-    if (monitorReceipt.indexOf("reset", 0) > -1)
+    if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
       Monitor.print("resetting");
       // ASCOM.print("get this");
