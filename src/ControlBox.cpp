@@ -1,6 +1,17 @@
 /*
 
-search for 'clash' to resolve issues
+Next steps: 
+1 - put together a data packet for transmission to the monitor on receipt of a request
+    perhaps assemble the packet at the end of loop(). The monitor program informs the data which is needed
+    the target az -     targetazimuth
+    movement direction  querydir   
+    movement status     movementstate
+    target status?      targetmessage
+    Degrees to target   String(CDArray[CurrentAzimuth])
+    Dome Azimuth        
+    Camera power state
+
+2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR
 
 Note Note Note Note Note Note
 
@@ -18,7 +29,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 
 */
 
-// todo change the occurences of eastsync to westsync - as thats where the hall sensor is located
+
 
 //
 // see this sheets URL for values related to deceleration used to inform values in this code
@@ -50,7 +61,7 @@ String WhichDirection();
 void WithinFiveDegrees();
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
-void SendToMonitor();
+void createDataPacket();
 void PowerOn();
 void PowerOff();
 void resetViaSWR();
@@ -109,6 +120,7 @@ String TargetMessage = "";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
 String pkversion = "6.0";
+String dataPacket = "";
 
 volatile long A_Counter; // volatile because it's used in the interrupt routine
 float Azimuth;           // The data type is important to avoid integer arithmetic in the encoder() routine
@@ -218,17 +230,12 @@ void loop()
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
-    if (monitorReceipt.indexOf("stopdata", 0) > -1)
+    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   //this will be received from the monitor program
     {
-
-      monitorSendFlag = false; // this disables the data stream to the monitor program
+      Monitor.print(dataPacket);
     }
 
-    if (monitorReceipt.indexOf("monitorstepper", 0) > -1)
-    {
-      Monitor.print("monitorstepper#");
-      monitorSendFlag = true; // this enables the data stream to the monitor program
-    }
+    
     if (monitorReceipt.indexOf("reset", 0) > -1)
     {
       Monitor.print("resetting");
@@ -250,9 +257,9 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("stepper", 0) > -1)
+    if (receivedData.indexOf("controlbox", 0) > -1)
     {
-      ASCOM.print("stepper#");
+      ASCOM.print("controlbox#");
     }
 
     //*************************************************************************
@@ -388,17 +395,7 @@ void loop()
 
     stepper.run();
 
-    // update the LCD info
-    //
-    /*
-    if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves
-    {
-      // TODO UNCOMMENT THE LINE BELOW
-      SendToMonitor();
-
-      monitorTimerInterval = millis();
-    }
-    */
+    
 
     check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor
 
@@ -428,12 +425,12 @@ if (homing)
 
 }
 
- // update the LCD info
+ // update the data packet for monitoring program
     //
     if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves
     {
       // TODO UNCOMMENT THE LINE BELOW
-      SendToMonitor();
+      createDataPacket();
 
       monitorTimerInterval = millis();
     }
@@ -528,7 +525,7 @@ void check_If_SlewingTargetAchieved()
       TargetMessage = "Target achieved ";
       QueryDir = "None";
 
-      SendToMonitor();
+      createDataPacket();
 
       PowerOff(); // power off the stepper now that the target is reached.
     }
@@ -542,12 +539,14 @@ void check_If_SlewingTargetAchieved()
 
 }
 
-void SendToMonitor()
+void createDataPacket()
 {
-  if (monitorSendFlag)
-  {
-    Monitor.print("START#" + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#');
-
+  
+  CurrentAzimuth = getCurrentAzimuth(); 
+  String dataPacket ="";
+    
+  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#';
+  
     /*
     the line above can be removed and the commented section below reinstated. Done to try to improve speed
       Monitor.print("START#");
@@ -555,23 +554,9 @@ void SendToMonitor()
       Monitor.print(movementstate                + '#');
       Monitor.print(QueryDir                     + '#');
       Monitor.print(TargetMessage                + '#');
+
       */
-
-    CurrentAzimuth = getCurrentAzimuth(); 
-
-    Monitor.print(String(CDArray[CurrentAzimuth]) + '#' + String(EncoderReplyCounter) + '#'); // in the monitor program this is called distance to target
-
-    // Monitor.print(String(EncoderReplyCounter)  + '#');
-    /*
-    list of data need by the monitor program
-    targetazimuth
-    movementstate
-    querydir
-    targetmessage
-    distance to target
-    encoderreplycounter
-    */
-  }
+  
 }
 
 //---------------------------------------------------------------------------------------------------------------
