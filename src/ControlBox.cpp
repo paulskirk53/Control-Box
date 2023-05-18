@@ -90,7 +90,7 @@ void WestSync();
 
 // meaningful names for the serial ports
 #define Monitor Serial2
-#define ASCOM Serial
+#define ASCOM Serial1
 
 #define ledpin 3  // no clash with encoder
 
