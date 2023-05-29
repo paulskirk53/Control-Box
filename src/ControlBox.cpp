@@ -550,8 +550,9 @@ void createDataPacket()
   CurrentAzimuth = getCurrentAzimuth(); 
   String dataPacket ="";
     
-  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + String(cameraPowerState) + '#';
-  
+  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + String(cameraPowerState) + '$';
+  //note the string item delimiter is # 
+  //note the string delimiter is $
    //todo perhaps include the dome azimuth value into this string?
   
 }
