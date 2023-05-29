@@ -1,15 +1,16 @@
 /*
 
 Next steps: 
-1 - put together a data packet for transmission to the monitor on receipt of a request
-    perhaps assemble the packet at the end of loop(). The monitor program informs the data which is needed
+1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
+    the packet is assembled using global vars which are uodated as any of the data items below are changed 
+    The monitor program informs the data which is needed in the packet
     the target az -     targetazimuth
     movement direction  querydir   
     movement status     movementstate
     target status?      targetmessage
     Degrees to target   String(CDArray[CurrentAzimuth])
-    Dome Azimuth        
-    Camera power state
+    Dome Azimuth        getcurrentazimuth()  ??
+    Camera power state  cameraPowerState
 
 2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR
 
@@ -243,7 +244,7 @@ void loop()
     {
       Monitor.print("resetting");
       // ASCOM.print("get this");
-      // TODO MAYBE REINSTATE THE LINE BELOW - done
+      
       resetViaSWR();
     }
   } // endif Monitor.available
@@ -428,11 +429,11 @@ if (homing)
 
 }
 
- // update the data packet for monitoring program
+ // create / update the data packet for monitoring program
     //
     if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves
     {
-      // TODO UNCOMMENT THE LINE BELOW
+      
       createDataPacket();
 
       monitorTimerInterval = millis();
@@ -528,7 +529,8 @@ void check_If_SlewingTargetAchieved()
       TargetMessage = "Target achieved ";
       QueryDir = "None";
 
-      createDataPacket();
+     //todo - this is probably not needed here - just the var updates which will be used in the monitortimerinterval() routine once per second to create the packet 
+     //createDataPacket();
 
       PowerOff(); // power off the stepper now that the target is reached.
     }
@@ -548,17 +550,9 @@ void createDataPacket()
   CurrentAzimuth = getCurrentAzimuth(); 
   String dataPacket ="";
     
-  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#';
+  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + String(cameraPowerState) + '#';
   
-    /*
-    the line above can be removed and the commented section below reinstated. Done to try to improve speed
-      Monitor.print("START#");
-      Monitor.print(String(TargetAzimuth)        + '#');
-      Monitor.print(movementstate                + '#');
-      Monitor.print(QueryDir                     + '#');
-      Monitor.print(TargetMessage                + '#');
-
-      */
+   //todo perhaps include the dome azimuth value into this string?
   
 }
 
