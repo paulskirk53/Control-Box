@@ -93,7 +93,7 @@ void WestSync();
 #define Monitor Serial2
 #define ASCOM Serial1
 
-#define ledpin 3  // no clash with encoder
+#define ledpin 23  // no clash with encoder
 
 // Define a stepper and the pins it will use
 
@@ -583,10 +583,11 @@ void lightup()
   for (int i = 0; i < 10; i++)
   {
     digitalWrite(ledpin, HIGH);
-    delay(1000);
+    delay(500);
     digitalWrite(ledpin, LOW);
-    delay(1000);
+    delay(500);
   }
+  
 }
 bool checkForValidAzimuth()
 {
