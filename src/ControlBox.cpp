@@ -236,7 +236,7 @@ void loop()
     {
       Monitor.print(dataPacket);
     }
-    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request
+    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request todo check line below should the ports be ASCOM?
     {
       ASCOM.print("monitorcontrol#");
     }
@@ -437,6 +437,8 @@ if (homing)
       
       createDataPacket();
       heartBeat();
+      Monitor.print("Comtest");
+      // todo test of encoder - remove line below 
 
       monitorTimerInterval = millis();
     }
