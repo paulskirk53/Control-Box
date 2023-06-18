@@ -73,6 +73,7 @@ uint16_t encoder();
 bool PowerForCamera(bool State);
 void interrupt();
 void WestSync();
+void heartBeat();
 
 // end declarations
 // defines for the encoder inclusion
@@ -431,10 +432,11 @@ if (homing)
 
  // create / update the data packet for monitoring program
     //
-    if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves
+    if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves and tick the heartbeat LED
     {
       
       createDataPacket();
+      heartBeat();
 
       monitorTimerInterval = millis();
     }
@@ -674,4 +676,15 @@ void WestSync()
   // this routine is called when the westsync interrupt fires
   A_Counter = ticksperDomeRev / 4.0;
   homeSensor==true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
+}
+void heartBeat()
+{
+  if ( digitalRead(ledpin))
+    {
+      digitalWrite(ledpin, LOW);
+    }
+    else
+    {
+      digitalWrite(ledpin, HIGH);
+    }
 }
