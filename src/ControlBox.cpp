@@ -437,8 +437,11 @@ if (homing)
       
       createDataPacket();
       heartBeat();
-      Monitor.print("Comtest");
-      // todo test of encoder - remove line below 
+
+      // todo test of encoder - remove two lines below 
+      Monitor.print("Azimuth value ");
+      Monitor.println(getCurrentAzimuth());
+      
 
       monitorTimerInterval = millis();
     }
