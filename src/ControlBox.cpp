@@ -92,7 +92,7 @@ void heartBeat();
 
 // meaningful names for the serial ports
 #define Monitor Serial2
-#define ASCOM Serial1
+#define ASCOM Serial
 
 #define ledpin 23  // no clash with encoder
 
@@ -439,8 +439,8 @@ if (homing)
       heartBeat();
 
       // todo test of encoder - remove two lines below 
-      Monitor.print("Azimuth value ");
-      Monitor.println(getCurrentAzimuth());
+      ASCOM.print("Azimuth value ");
+      ASCOM.println(getCurrentAzimuth());
       
 
       monitorTimerInterval = millis();
