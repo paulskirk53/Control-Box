@@ -1,5 +1,6 @@
 /*
-
+com42 ASCOM
+Com6 monitor
 Next steps: 
 1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
@@ -118,7 +119,7 @@ int savedAzimuth = 0;
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
 
-String TargetMessage = "";
+String TargetMessage = "No Target";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
 String pkversion = "6.0";
@@ -235,6 +236,7 @@ void loop()
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet with all the monitoring data
     {
       Monitor.print(dataPacket);
+     // Monitor.print("arse");
     }
     if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request todo check line below should the ports be ASCOM?
     {
@@ -245,7 +247,7 @@ void loop()
     {
       Monitor.print("resetting");
       // ASCOM.print("get this");
-      
+      delay(1000);   //test todo remove line below
       resetViaSWR();
     }
   } // endif Monitor.available
@@ -439,8 +441,8 @@ if (homing)
       heartBeat();
 
       // todo test of encoder - remove two lines below 
-      ASCOM.print("Azimuth value ");
-      ASCOM.println(getCurrentAzimuth());
+     // ASCOM.print("Azimuth value ");
+      // ASCOM.println(getCurrentAzimuth());
       
 
       monitorTimerInterval = millis();
@@ -555,12 +557,12 @@ void createDataPacket()
 {
   
   CurrentAzimuth = getCurrentAzimuth(); 
-  String dataPacket ="";
-    
-  dataPacket = String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + String(cameraPowerState) + '$';
+  //todo remove line below
+    // cameraPowerState = true;
+  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '$';
   //note the string item delimiter is # 
   //note the string delimiter is $
-   //todo perhaps include the dome azimuth value into this string?
+   //todo perhaps include the dome azimuth value into this string? - done 20-6-23
   
 }
 
