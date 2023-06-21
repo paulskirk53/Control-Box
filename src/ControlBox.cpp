@@ -64,8 +64,8 @@ void WithinFiveDegrees();
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
 void createDataPacket();
-void PowerOn();
-void PowerOff();
+void domePowerOn();
+void domePowerOff();
 void resetViaSWR();
 void lightup();
 bool checkForValidAzimuth();
@@ -238,11 +238,23 @@ void loop()
       Monitor.print(dataPacket);
      // Monitor.print("arse");
     }
-    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request todo check line below should the ports be ASCOM?
+
+    //*************************************************************************
+    //******** code for Monitor MCU Identity process below **********************
+    //**** Used by the ASCOM driver to identify the COM port in use. **********
+    //*************************************************************************
+    //*************************************************************************
+
+    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request 
     {
-      ASCOM.print("monitorcontrol#");
+      Monitor.print("monitorcontrol#");
     }
     
+    //*************************************************************************
+    //********      code for MCU reset process below          *****************
+    //*************************************************************************
+    //*************************************************************************
+
     if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
       Monitor.print("resetting");
@@ -250,7 +262,34 @@ void loop()
       delay(1000);   //test todo remove line below
       resetViaSWR();
     }
+
+    //*************************************************************************
+    //************** code for Camera power process below **********************
+    //**** Used by the Monitor program to control the power state (on /off) ***
+    //*************************************************************************
+    //*************************************************************************
+
+if (monitorReceipt.indexOf("CAMON", 0) > -1)     // turn imaging camera power on
+    {
+       PowerForCamera(on);
+
+    }
+
+if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power off
+    {
+       PowerForCamera(on);
+
+    }
+
   } // endif Monitor.available
+
+    //*************************************************************************
+    //************     code for ASCOM functions below    **********************
+    //**** Used by the ASCOM driver to facilitate  dome functions    **********
+    //*************************************************************************
+    //*************************************************************************
+
+
 
   if (ASCOM.available() > 0) // when serial data arrives from the driver on USB capture it into a string
   {
@@ -259,7 +298,7 @@ void loop()
     
 
     //*************************************************************************
-    //******** code for MCU Identity process below ****************************
+    //******** code for ASCOM MCU Identity process below **********************
     //**** Used by the ASCOM driver to identify the COM port in use. **********
     //*************************************************************************
     //*************************************************************************
@@ -271,7 +310,7 @@ void loop()
 
     //*************************************************************************
     //******** code for emergency stop process below **************************
-    //******** data sent by driver ES#               **************************
+    //********            data sent by ASCOM driver ES#         ***************
     //*************************************************************************
     //*************************************************************************
 
@@ -283,15 +322,15 @@ void loop()
     } // end Emergency Stop
 
     //*************************************************************************
-    //******** code for SA process below **************************************
-    //**** format of data sent by driver SA220.00#   **************************
+    //********      code for SA process below            **********************
+    //******** format of data sent by driver SA220.00#   **********************
     //*************************************************************************
     //*************************************************************************
 
     if (receivedData.indexOf("SA", 0) > -1) //
     {
 
-      PowerOn(); // turn on the power supply for the stepper motor
+      domePowerOn(); // turn on the power supply for the stepper motor
       // strip off 1st 2 chars
       receivedData.remove(0, 2);
 
@@ -379,7 +418,7 @@ void loop()
 
        stepper.moveTo(150000000);              // this number has to be large enough for the drive to be able to complete a full circle.
 
-       PowerOn(); 
+       domePowerOn(); 
        homing = true;                          // used in loop() to control motor movement
 
        // send to monitor - started homing
@@ -426,7 +465,7 @@ if (homing)
     homing        = false;
     homeSensor    = false;      //homing is finished, so set the sensor to false. It may be set true again by calls to getcurrentazimuth()
     //load and try
-    PowerOff();
+    domePowerOff();
   }
 
 
@@ -461,7 +500,7 @@ void Emergency_Stop(int azimuth, String mess)
   Slewing = false;
 
   // turn off power to the stepper
-  PowerOff();
+  domePowerOff();
 }
 
 String WhichDirection()
@@ -541,7 +580,7 @@ void check_If_SlewingTargetAchieved()
      //todo - this is probably not needed here - just the var updates which will be used in the monitortimerinterval() routine once per second to create the packet 
      //createDataPacket();
 
-      PowerOff(); // power off the stepper now that the target is reached.
+      domePowerOff(); // power off the stepper now that the target is reached.
     }
     else
     {
@@ -568,7 +607,7 @@ void createDataPacket()
 
 //---------------------------------------------------------------------------------------------------------------
 
-void PowerOn() // set the power SSR gate high
+void domePowerOn() // set the dome power SSR gate high
 {
   digitalWrite(power_pin, HIGH);
 
@@ -577,7 +616,7 @@ void PowerOn() // set the power SSR gate high
 
 //---------------------------------------------------------------------------------------------------------------
 
-void PowerOff() // set the power SSR gate low
+void domePowerOff() // set the dome power SSR gate low
 {
   digitalWrite(power_pin, LOW);
 }
