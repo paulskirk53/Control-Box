@@ -235,6 +235,7 @@ void loop()
 
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet with all the monitoring data
     {
+      
       Monitor.print(dataPacket);
      // Monitor.print("arse");
     }
@@ -259,7 +260,7 @@ void loop()
     {
       Monitor.print("resetting");
       // ASCOM.print("get this");
-      delay(1000);   //test todo remove line below
+      delay(1000);   //
       resetViaSWR();
     }
 
@@ -272,13 +273,13 @@ void loop()
 if (monitorReceipt.indexOf("CAMON", 0) > -1)     // turn imaging camera power on
     {
        PowerForCamera(on);
-
+       //Monitor.print("rec'd camon");
     }
 
 if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power off
     {
-       PowerForCamera(on);
-
+       PowerForCamera(off);
+       //Monitor.print("rec'd camOFF");
     }
 
   } // endif Monitor.available
@@ -598,11 +599,13 @@ void createDataPacket()
   CurrentAzimuth = getCurrentAzimuth(); 
   //todo remove line below
     // cameraPowerState = true;
-  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '$';
+  
+  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' + '$';
+  // dome azimuth,  target azimuth,  movementstate,  querydir,  targetmessage,  cdarray[currentazimut] ,  cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
-   //todo perhaps include the dome azimuth value into this string? - done 20-6-23
-  
+   
+  //Monitor.println(dataPacket);
 }
 
 //---------------------------------------------------------------------------------------------------------------
