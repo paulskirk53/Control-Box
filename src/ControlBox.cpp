@@ -597,11 +597,11 @@ void createDataPacket()
 {
   
   CurrentAzimuth = getCurrentAzimuth(); 
-  //todo remove line below
-    // cameraPowerState = true;
+      
+  //seven items below
   
   dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' + '$';
-  // dome azimuth,  target azimuth,  movementstate,  querydir,  targetmessage,  cdarray[currentazimut] ,  cameraPowerState
+  //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
    
