@@ -297,6 +297,18 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
 
     receivedData = ASCOM.readStringUntil('#'); // read a string from PC serial port usb
     
+    //*************************************************************************
+    //********      code for ASCOM Azimuth FUNCTION      **********************
+    //*************************************************************************
+    //*************************************************************************
+
+    if (receivedData.indexOf("AZ", 0) > -1)
+    {
+      int x =  getCurrentAzimuth();
+      ASCOM.print(String(x) + "#");
+    }
+
+
 
     //*************************************************************************
     //******** code for ASCOM MCU Identity process below **********************
@@ -604,8 +616,8 @@ void createDataPacket()
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
-   
-  //Monitor.println(dataPacket);
+  //todo remove the line below which was just for testing 
+  Monitor.println(dataPacket);
 }
 
 //---------------------------------------------------------------------------------------------------------------
