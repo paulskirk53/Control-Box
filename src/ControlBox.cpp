@@ -308,6 +308,15 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
       ASCOM.print(String(x) + "#");
     }
 
+//TEST LINES X BELOW TODO REMOVE
+
+
+if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and returns the distance to go to the serial monitor. The command is not used by ASCOm Driver
+    {
+      int x =  stepper.distanceToGo();
+      ASCOM.println(String(x) + "#");
+    }
+
 
 
     //*************************************************************************
@@ -369,8 +378,8 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
           stepper.setCurrentPosition(0);               // initialise the stepper position
           QueryDir = WhichDirection();                 // work out which direction of travel is optimum
           // todo remove 2 lines blow
-          // ASCOM.print("So the direction is  ");
-          // ASCOM.println(QueryDir);
+           //Monitor.print("So the direction is  ");
+           //Monitor.println(QueryDir);
 
           if (QueryDir == "clockwise")
           {
@@ -581,6 +590,9 @@ void check_If_SlewingTargetAchieved()
 
     if (abs(stepper.distanceToGo()) < 20)
     {
+      //TODO REMOVE 3 TEST LINE BELOW
+     // int x = abs(stepper.distanceToGo() );
+     // Monitor.println(x);
       Slewing = false;              // used to stop the motor in main loop
       movementstate = "Stopped.  "; // for updating the lcdpanel
 
@@ -617,7 +629,7 @@ void createDataPacket()
   //note the string item delimiter is # 
   //note the string delimiter is $
   //todo remove the line below which was just for testing 
-  Monitor.println(dataPacket);
+  //Monitor.println(dataPacket);
 }
 
 //---------------------------------------------------------------------------------------------------------------
