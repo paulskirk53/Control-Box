@@ -310,14 +310,14 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
 
 //TEST LINES X BELOW TODO REMOVE
 
-
+/*
 if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and returns the distance to go to the serial monitor. The command is not used by ASCOm Driver
     {
       int x =  stepper.distanceToGo();
       ASCOM.println(String(x) + "#");
     }
 
-
+*/
 
     //*************************************************************************
     //******** code for ASCOM MCU Identity process below **********************
