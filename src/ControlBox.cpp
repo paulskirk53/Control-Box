@@ -85,7 +85,7 @@ void heartBeat();
 #define dirPin 10  // connection for motor direction signal
 #define stepPin 11  // connection for motor step signal
 
-#define EncoderledPin 14  // led flash for a function to be defined in control box
+
 #define WestPin 28        // sync connection for dome
 //
 #define off false
@@ -153,8 +153,6 @@ void setup()
 
   pinMode(WestPin, INPUT_PULLUP);
 
-
-  pinMode(EncoderledPin, OUTPUT);
   pinMode(CameraPower, OUTPUT);
 
   //turn the camera power of at startup:
