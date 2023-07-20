@@ -86,7 +86,7 @@ void heartBeat();
 #define stepPin 11  // connection for motor step signal
 
 
-#define WestPin 28        // sync connection for dome
+#define WestPin 29        // sync connection for dome
 //
 #define off false
 #define on true
