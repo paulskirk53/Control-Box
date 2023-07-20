@@ -95,7 +95,7 @@ void heartBeat();
 #define Monitor Serial2
 #define ASCOM Serial
 
-#define ledpin 23  // no clash with encoder
+#define ledpin 23  
 
 // Define a stepper and the pins it will use
 
@@ -125,10 +125,11 @@ String movementstate = "Not Moving";
 String pkversion = "6.0";
 String dataPacket = "";
 
-volatile long A_Counter; // volatile because it's used in the interrupt routine
-float Azimuth;           // The data type is important to avoid integer arithmetic in the encoder() routine
-uint16_t integerAzimuth; // this is what is returned from the encoder routine
-                         // and also because we really don't need fractional degrees for dome movement.
+volatile long A_Counter;    // volatile because it's used in the interrupt routine
+volatile int syncCount = 0; // counts the number of syncs and acts as an indicator on the monitor program
+float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
+uint16_t integerAzimuth;    // this is what is returned from the encoder routine
+                            // and also because we really don't need fractional degrees for dome movement.
 float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the number of encoder wheel rotations for one dome rev. 11-9-21
 
 bool cameraPowerState = off;
@@ -620,9 +621,9 @@ void createDataPacket()
   
   CurrentAzimuth = getCurrentAzimuth(); 
       
-  //seven items below
+  //eight items below
   
-  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' + '$';
+  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
@@ -746,7 +747,8 @@ void WestSync()
 {
   // this routine is called when the westsync interrupt fires
   A_Counter = ticksperDomeRev / 4.0;
-  homeSensor==true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
+  homeSensor=true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
+  syncCount ++;
 }
 void heartBeat()
 {
