@@ -172,7 +172,7 @@ void setup()
   
   attachInterrupt(digitalPinToInterrupt(WestPin), WestSync, RISING);
 
-  A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 for the dome when the scope is at 270.
+  A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
 
   PowerForCamera(off); // camera power is off by default
 
