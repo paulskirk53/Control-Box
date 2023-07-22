@@ -48,8 +48,8 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 //
 //  The routine drives the stepper motor to move the Dome
 //  It acquires the current azimuth via hardware serial from the encoder
-//  todo - the former spi transaction included a flag for the home position which was set in eastsync() - need to perhaps put this into westsync()
-//  as there is no eastsync in the observatory
+
+
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
@@ -79,7 +79,7 @@ void heartBeat();
 // end declarations
 // defines for the encoder inclusion
 #define power_pin 2   
-#define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt todo check that these pins will work as interrupts
+#define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
 #define B_PHASE 5
 #define CameraPower 6  // power for the imaging camera
 #define dirPin 10  // connection for motor direction signal
@@ -196,7 +196,7 @@ void setup()
   monitorTimerInterval = millis();
   azimuthTimerInterval = millis();
 
-  homeSensor = false;          // this later set in the getcurrentazimuth() spi transaction todo find out about how this works
+  homeSensor = false;          // 
 
   ASCOM.begin(19200);   // start serial ports ASCOM driver - usb with PC - rx0 tx0 and updi
   
@@ -472,7 +472,7 @@ if (homing)
 {
   if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
   {
-    getCurrentAzimuth();                      // The spi transaction gets the homesensor state todo find out
+    getCurrentAzimuth();                      
     azimuthTimerInterval = millis();
     //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
     //ASCOM.println(homeSensor);
