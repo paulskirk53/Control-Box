@@ -104,8 +104,8 @@ AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 String receivedData;
 boolean DoTheDeceleration;
 boolean Slewing; // controls whether the stepper is stepped in the main loop
-boolean homing;
-boolean homeSensor;
+boolean homing = false;
+boolean homeSensor = false;
 float StepsPerSecond; // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
 
 boolean TargetChanged = false;
@@ -410,7 +410,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     if (receivedData.indexOf("SL", 0) > -1) //
     {
 
-      if (Slewing)
+      if (Slewing | homing)
       {
         ASCOM.print("Moving#");
         // stepper.run();
@@ -511,6 +511,23 @@ if (homing)
 
 
   stepper.run();   // stepper run - works for slewing and for findHome
+
+/*
+remove the code between //start and //end below - it was inserted as a way of simulating the home position for testing
+
+*/
+
+//start
+if ( (Azimuth > 260.0) && (Azimuth <265) )
+{
+  homeSensor = true;
+}
+
+
+
+//end
+
+
 
 } // end void Loop //////////////////////////////////////////////////////////////////////////////////////////////////////
 
