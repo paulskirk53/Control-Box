@@ -515,7 +515,7 @@ if (homing)
 /*
 remove the code between //start and //end below - it was inserted as a way of simulating the home position for testing
 
-*/
+
 
 //start
 if ( (Azimuth > 260.0) && (Azimuth <265) )
@@ -523,7 +523,7 @@ if ( (Azimuth > 260.0) && (Azimuth <265) )
   homeSensor = true;
 }
 
-
+*/
 
 //end
 
