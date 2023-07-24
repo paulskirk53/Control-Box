@@ -48,7 +48,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 //
 //  The routine drives the stepper motor to move the Dome
 //  It acquires the current azimuth via hardware serial from the encoder
-
+//TODO SET THE STEPPER CURRENT POS TO ZERO BEFORE SETTING THE TARGET FOR QUERYDIR
 
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
@@ -377,18 +377,19 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
           stepper.setCurrentPosition(0);               // initialise the stepper position
           QueryDir = WhichDirection();                 // work out which direction of travel is optimum
           // todo remove 2 lines blow
-           //Monitor.print("So the direction is  ");
-           //Monitor.println(QueryDir);
+          // ASCOM.print("So the direction is  ");
+          // ASCOM.println(QueryDir);
 
           if (QueryDir == "clockwise")
           {
+            stepper.setCurrentPosition(0);
             stepper.moveTo(150000000); // positive number means clockwise in accelstepper library. This number must be sufficiently large
                                        // to provide enough steps to reach the target.
           }
 
           if (QueryDir == "anticlockwise")
           {
-
+            stepper.setCurrentPosition(0);
             stepper.moveTo(-150000000); // negative is anticlockwise in accelstepper library
           }
 
