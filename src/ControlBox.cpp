@@ -54,6 +54,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
 #include "linkedList.h"
+#include <digitalWriteFast.h>
 
 
 // Forward declarations
@@ -303,8 +304,10 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
 
     if (receivedData.indexOf("AZ", 0) > -1)
     {
-      int x =  getCurrentAzimuth();
-      ASCOM.print(String(x) + "#");
+
+      String x = (String) getCurrentAzimuth();
+      x += "#";
+      ASCOM.print(x);
     }
 
 //TEST LINES X BELOW TODO REMOVE
@@ -770,12 +773,13 @@ void WestSync()
 }
 void heartBeat()
 {
-  if ( digitalRead(ledpin))
+  
+  if ( digitalReadFast(ledpin))
     {
-      digitalWrite(ledpin, LOW);
+      digitalWriteFast(ledpin, LOW);
     }
     else
     {
-      digitalWrite(ledpin, HIGH);
+      digitalWriteFast(ledpin, HIGH);
     }
 }
