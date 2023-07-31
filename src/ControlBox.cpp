@@ -748,8 +748,8 @@ void interrupt() // Interrupt function
 {
 
   char i, j;
-  i = digitalRead(B_PHASE);
-  j = digitalRead(A_PHASE);
+  i = digitalReadFast(B_PHASE);
+  j = digitalReadFast(A_PHASE);
   if (i == j)
   {
     A_Counter -= 1;
