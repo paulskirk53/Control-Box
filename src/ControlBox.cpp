@@ -54,7 +54,6 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
 #include "linkedList.h"
-#include <digitalWriteFast.h>
 
 
 // Forward declarations
@@ -748,8 +747,8 @@ void interrupt() // Interrupt function
 {
 
   char i, j;
-  i = digitalReadFast(B_PHASE);
-  j = digitalReadFast(A_PHASE);
+  i = digitalRead(B_PHASE);
+  j = digitalRead(A_PHASE);
   if (i == j)
   {
     A_Counter -= 1;
@@ -774,12 +773,12 @@ void WestSync()
 void heartBeat()
 {
   
-  if ( digitalReadFast(ledpin))
+  if ( digitalRead(ledpin))
     {
-      digitalWriteFast(ledpin, LOW);
+      digitalWrite(ledpin, LOW);
     }
     else
     {
-      digitalWriteFast(ledpin, HIGH);
+      digitalWrite(ledpin, HIGH);
     }
 }
