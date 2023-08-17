@@ -118,6 +118,7 @@ int EncoderReplyCounter = 0;
 int savedAzimuth = 0;
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
+long LedTimerInterval     = 0.0l;
 
 String TargetMessage = "No Target";
 String QueryDir = "No Direction";
@@ -195,6 +196,7 @@ void setup()
   DoTheDeceleration    = true; // used to set deceleration towards target azimuth
   monitorTimerInterval = millis();
   azimuthTimerInterval = millis();
+  LedTimerInterval     = millis();
 
   homeSensor = false;          // 
 
@@ -501,16 +503,17 @@ if (homing)
     {
       
       createDataPacket();
-      heartBeat();
-
-      // todo test of encoder - remove two lines below 
-     // ASCOM.print("Azimuth value ");
-      // ASCOM.println(getCurrentAzimuth());
-      
-
       monitorTimerInterval = millis();
+
     }
 
+    if ((millis() - LedTimerInterval) > 20000.0) // twenty second timer for a led flash - an indicator that code is running
+    {
+      
+      
+      heartBeat();
+      LedTimerInterval = millis();
+    }
 
 
   stepper.run();   // stepper run - works for slewing and for findHome
@@ -773,7 +776,7 @@ void WestSync()
 void heartBeat()
 {
   
-  if ( digitalRead(ledpin))
+  if ( digitalReadFast(ledpin))
     {
       digitalWrite(ledpin, LOW);
     }
