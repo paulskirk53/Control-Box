@@ -15,10 +15,10 @@ Next steps:
 
 2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR
 
-Note Note Note Note Note Note
+Note ========== 8-9-23 ======= Note Note Note Note Note
 
 This project is the Code for the new (1-5-23) control box (stepper and encoder functions) on one AVR4809 chip
-
+and this branch looks to use degrees as the moveto method rather than steps 
 
 Note Note Note Note Note Note
 */
@@ -82,11 +82,11 @@ void heartBeat();
 #define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
 #define B_PHASE 5
 #define CameraPower 6  // power for the imaging camera
-#define dirPin 10  // connection for motor direction signal
-#define stepPin 11  // connection for motor step signal
+#define dirPin 10      // connection for motor direction signal
+#define stepPin 11     // connection for motor step signal
 
 
-#define WestPin 29        // sync connection for dome
+#define WestPin 29     // sync connection for dome
 //
 #define off false
 #define on true
@@ -125,6 +125,8 @@ String QueryDir = "No Direction";
 String movementstate = "Not Moving";
 String pkversion = "6.0";
 String dataPacket = "";
+
+
 
 volatile long A_Counter;    // volatile because it's used in the interrupt routine
 volatile int syncCount = 0; // counts the number of syncs and acts as an indicator on the monitor program
