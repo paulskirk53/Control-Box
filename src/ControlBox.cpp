@@ -60,7 +60,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 
 void Emergency_Stop(int azimuth, String mess);
 String WhichDirection();
-void WithinFiveDegrees();
+
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
 void createDataPacket();
@@ -102,28 +102,29 @@ void heartBeat();
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
 String receivedData;
-boolean DoTheDeceleration;
+
 boolean Slewing; // controls whether the stepper is stepped in the main loop
 boolean homing = false;
 boolean homeSensor = false;
 float StepsPerSecond; // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
+                      //NB as of summer '23 the controller is the TB6600
 
-boolean TargetChanged = false;
-boolean monitorSendFlag = false; // this only becomes true after the MCU is connected successfully and when true, the data stream to the monitor program is enabled
+
+
 float normalAcceleration;        // was incorrectly set to data type int
 
-int stepsToTarget = 0;
-int DecelValue = 400; // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
-int EncoderReplyCounter = 0;
-int savedAzimuth = 0;
+int stepsToTarget = 0;           // for monitor program
+
+
+int savedAzimuth = 0;             //int is 16 bit 
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
-
+long stepsPerDegree       =10;   //todo find the real value and update this statement
 String TargetMessage = "No Target";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
-String pkversion = "6.0";
+String pkversion = "7.0";
 String dataPacket = "";
 
 
@@ -133,7 +134,8 @@ volatile int syncCount = 0; // counts the number of syncs and acts as an indicat
 float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
 uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
-float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the number of encoder wheel rotations for one dome rev. 11-9-21
+float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the 
+                                // number of encoder wheel rotations for one dome rev. 11-9-21
 
 bool cameraPowerState = off;
 
@@ -195,7 +197,7 @@ void setup()
   // initialise
 
   CurrentAzimuth       = 0;
-  DoTheDeceleration    = true; // used to set deceleration towards target azimuth
+ 
   monitorTimerInterval = millis();
   azimuthTimerInterval = millis();
   LedTimerInterval     = millis();
@@ -308,9 +310,9 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
     if (receivedData.indexOf("AZ", 0) > -1)
     {
 
-      String x = (String) getCurrentAzimuth();
-      x += "#";
-      ASCOM.print(x);
+      String x = (String) getCurrentAzimuth();   // set x to the current dome azimuth
+      x += "#";     // add a # to comply with our comms protocol
+      ASCOM.print(x);  // send the az to the ASCOM dome driver
     }
 
 //TEST LINES X BELOW TODO REMOVE
@@ -336,7 +338,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     }
 
     //*************************************************************************
-    //******** code for emergency stop process below **************************
+    //********       code for emergency stop process below      ***************
     //********            data sent by ASCOM driver ES#         ***************
     //*************************************************************************
     //*************************************************************************
@@ -358,20 +360,20 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     {
 
       domePowerOn(); // turn on the power supply for the stepper motor
-      // strip off 1st 2 chars
+      // strip off 1st 2 chars - SA
       receivedData.remove(0, 2);
 
       TargetAzimuth = receivedData.toInt(); // store the target azimuth for comparison with current position
-      // the way the code works is to treat a rrquest for az = 360 as az =0 , hence the if clause below
+      // the way the code works is to treat a request for az = 360 as az =0 , hence the if clause below
       if (TargetAzimuth == 360)
       {
         TargetAzimuth = 0;
       }
-      bool AzOK = checkForValidAzimuth();
+      bool AzOK = checkForValidAzimuth();   // is the az between 0 and 360
       if (AzOK)
       {
-        TargetChanged = true;
-
+        long targetPosition = TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move.
+        
         //  Serial.println();
         //  Serial.print("in slewto target received ");
         //  Serial.println(TargetAzimuth);
@@ -389,23 +391,23 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
           if (QueryDir == "clockwise")
           {
             stepper.setCurrentPosition(0);
-            stepper.moveTo(150000000); // positive number means clockwise in accelstepper library. This number must be sufficiently large
-                                       // to provide enough steps to reach the target.
+            stepper.moveTo(targetPosition); // positive number means clockwise in accelstepper library. 
+                                  
           }
 
           if (QueryDir == "anticlockwise")
           {
             stepper.setCurrentPosition(0);
-            stepper.moveTo(-150000000); // negative is anticlockwise in accelstepper library
+            stepper.moveTo(-targetPosition); // negative is anticlockwise in accelstepper library
           }
 
-          DoTheDeceleration = true;
-
-          // MOVED THE FOLLOWING FROM HERE TO NEXT LEVEL receivedData = "";
         }
         receivedData = "";
 
       } // end if azok
+      // set messages       
+      movementstate = "Moving"; // for updating the datapacket
+      TargetMessage = "Awaiting Target ";
     } // end if SA
 
     //**********************************************************
@@ -444,7 +446,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
        stepper.setCurrentPosition(0);          // wherever the motor is now is set to position 0
        stepper.setAcceleration(normalAcceleration/2.0); // half normal for homing
 
-       stepper.moveTo(150000000);              // this number has to be large enough for the drive to be able to complete a full circle.
+       stepper.moveTo(150000000);              // todo needs change
 
        domePowerOn(); 
        homing = true;                          // used in loop() to control motor movement
@@ -465,8 +467,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
   // start grouping for Slewing functions here
   if (Slewing) // if the slew status is true, run the stepper and update the data in the monitor program
   {
-    WithinFiveDegrees();
-
+    
     stepper.run();
 
     
@@ -485,7 +486,7 @@ if (homing)
     //ASCOM.println(homeSensor);
   }
 
-  if (homeSensor==true)                     // true indicates the sensor at the home position has been activated
+  if (homeSensor == true)                     // true indicates the sensor at the home position has been activated
   {
     movementstate = "Not Moving";
     QueryDir      = "None";
@@ -519,21 +520,6 @@ if (homing)
 
 
   stepper.run();   // stepper run - works for slewing and for findHome
-
-/*
-remove the code between //start and //end below - it was inserted as a way of simulating the home position for testing
-
-
-
-//start
-if ( (Azimuth > 260.0) && (Azimuth <265) )
-{
-  homeSensor = true;
-}
-
-*/
-
-//end
 
 
 
@@ -573,34 +559,7 @@ String WhichDirection()
   }
 }
 
-void WithinFiveDegrees()
-{
 
-  if (DoTheDeceleration)
-  {
-
-    CurrentAzimuth = getCurrentAzimuth();
-
-    if ((abs(CurrentAzimuth - TargetAzimuth) < 5) && (TargetChanged == true)) // within 5 degrees of target
-    {
-
-      DoTheDeceleration = false;
-      if (QueryDir == "clockwise")
-      {
-        // set the moveto position to allow 100 steps more for deceleration  +ve for clockwise -ve for anticclock
-
-        stepper.moveTo(stepper.currentPosition() + DecelValue); // FROM MA860H Datasheet @0.225 step angle, it requires 1600 steps per rotation
-        // of the stepper drive wheel, so 1000 is 0.6 of a rotation
-      }
-
-      if (QueryDir == "anticlockwise")
-      {
-        //  stepper.setCurrentPosition(0);
-        stepper.moveTo(stepper.currentPosition() - DecelValue); // check this by printing out current position is it negative?
-      }
-    }
-  }
-}
 
 int getCurrentAzimuth()
 {
@@ -612,29 +571,23 @@ int getCurrentAzimuth()
 void check_If_SlewingTargetAchieved()
 {
 
-    if (abs(stepper.distanceToGo()) < 20)
+    if (stepper.distanceToGo() == 0 )
     {
-      //TODO REMOVE 3 TEST LINE BELOW
-     // int x = abs(stepper.distanceToGo() );
-     // Monitor.println(x);
+      
       Slewing = false;              // used to stop the motor in main loop
       movementstate = "Stopped.  "; // for updating the lcdpanel
 
       // Serial.print("ABS STEPPER distance to go....");
       // Serial.println();
-      // update the LCD
+      
       TargetMessage = "Target achieved ";
       QueryDir = "None";
-
-     //todo - this is probably not needed here - just the var updates which will be used in the monitortimerinterval() routine once per second to create the packet 
-     //createDataPacket();
 
       domePowerOff(); // power off the stepper now that the target is reached.
     }
     else
     {
-      movementstate = "Moving"; // for updating the lcdpanel
-      TargetMessage = "Awaiting Target ";
+      
       stepper.run();
     }
 
