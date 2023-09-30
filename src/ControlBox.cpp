@@ -154,36 +154,35 @@ void setup()
   pinMode(ledpin, OUTPUT);
 
 
-// Pin modes for the encoder
-
-
+// Pin modes for the west sync and camera power
   pinMode(WestPin, INPUT_PULLUP);
-
   pinMode(CameraPower, OUTPUT);
 
   //turn the camera power of at startup:
   digitalWriteFast (CameraPower, LOW);           //  LOW is camera power OFF
 
- // encoder:
+ // Pin modes for the encoder:
   pinMode(A_PHASE, INPUT_PULLUP);
   pinMode(B_PHASE, INPUT_PULLUP);
 
 
 
-  // pins 2,3,18,19,20,21 are the only pins available to use with interrupts on the mega2560 (no pin limit)restrictions on 4809)
+  // pins 2,3,18,19,20,21 are the only pins available to use with interrupts on the mega2560 
+  // no interrupt pin limit restrictions on 4809)
   attachInterrupt(digitalPinToInterrupt(A_PHASE), interrupt, RISING); // interrupt for the encoder device
 
-  // interupts for the azimuth syncs below
+  // interupts for the west azimuth sync below
   
   attachInterrupt(digitalPinToInterrupt(WestPin), WestSync, RISING);
 
-  A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
+  A_Counter = ticksperDomeRev / (360.0 / 261.0); // the position of due west - 261 (calculation checked)
+                                                 // for the dome when the scope is at 270.
 
   PowerForCamera(off); // camera power is off by default
 
 
 
-  stepper.stop(); // set initial state as stopped
+  stepper.stop(); // set initial stepper motor state as stopped
 
   // Change below to suit the stepper
 
@@ -202,7 +201,7 @@ void setup()
   azimuthTimerInterval = millis();
   LedTimerInterval     = millis();
 
-  homeSensor = false;          // 
+  homeSensor = false;          // this uses the west sync hardware device
 
   ASCOM.begin(19200);   // start serial ports ASCOM driver - usb with PC - rx0 tx0 and updi
   
@@ -211,38 +210,38 @@ void setup()
   lightup(); // 10 SECOND DELAY flash Led to indicate reset when the box lid is off for testing
              // ALLOWS setup time for serial comms
 
-  // ASCOM.println(" before get azimuth");
+  // ASCOM.println(" before get azimuth");       // debug only
 
 
 
-  TargetAzimuth = getCurrentAzimuth(); // todo - check that a valid azimuth is returned
+  TargetAzimuth = getCurrentAzimuth(); // set the target az equal to the current az, so that no mevement takes place
+                                       // at power up
 
-  initialiseCDArray();
+  initialiseCDArray();    // used by the monitor program to provide a countdown to target during slew operations
 
   
 } // end setup
 
 /*
-  \\\\\\\\\\\\\\\\/////////////////////////\\\\\\\\\\\\\\\\\\\\\///////////////
-  ////////////////\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////\\\\\\\\\\\\\\\
-  ////////////////\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////\\\\\\\\\\\\\\\
-  \\\\\\\\\\\\\\\\/////////////////////////\\\\\\\\\\\\\\\\\\\\\///////////////
+  \\\\\\\\\\\\\\\\ ///////////////////////// End Setup() \\\\\\\\\ /////////////// \\\\\\\\\\\\\\\\\\\\\\\\\ /////////////////////
+  //////////////// \\\\\\\\\\\\\\\\\\\\\\\\\             ///////// \\\\\\\\\\\\\\\ ///////////////////////// \\\\\\\\\\\\\\\\\\\\\
 */
 
 void loop()
 {
 
-  // put your main code here, to run repeatedly, perhaps for eternity if the power holds up....
+  // put your main code here, to run repeatedly, perhaps for eternity if the power holds up....How long is eternity?
+  // also there are other considerations such as corrosion of connectors and joints over a period such as eternity...
 
-  if (Monitor.available() > 0)
+  if (Monitor.available() > 0)    // monitor is the serial data stream used for comms to the monitor program
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet with all the monitoring data
     {
       
-      Monitor.print(dataPacket);
-     // Monitor.print("arse");
+      Monitor.print(dataPacket);   // send the requested datapacket to the monitor program
+     
     }
 
     //*************************************************************************
@@ -251,8 +250,8 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request 
-    {
+    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request - the monitor program uses this exchange
+    {                                                       // to identify which windows com port is used by this MCU
       Monitor.print("monitorcontrol#");
     }
     
@@ -297,7 +296,7 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
 
 
 
-  if (ASCOM.available() > 0) // when serial data arrives from the driver on USB capture it into a string
+  if (ASCOM.available() > 0) // when serial data arrives from the ASCOM driver capture it into a string
   {
 
     receivedData = ASCOM.readStringUntil('#'); // read a string from PC serial port usb
@@ -311,8 +310,8 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
     {
 
       String x = (String) getCurrentAzimuth();   // set x to the current dome azimuth
-      x += "#";     // add a # to comply with our comms protocol
-      ASCOM.print(x);  // send the az to the ASCOM dome driver
+      x += "#";                                  // add a # to comply with our comms protocol
+      ASCOM.print(x);                            // send the azimuth to the ASCOM dome driver
     }
 
 //TEST LINES X BELOW TODO REMOVE
@@ -332,8 +331,8 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("controlbox", 0) > -1)
-    {
+    if (receivedData.indexOf("controlbox", 0) > -1)  // this data exchange used to id the comport
+    {                                                //  used for the ASCOM connection
       ASCOM.print("controlbox#");
     }
 
@@ -372,8 +371,8 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
       bool AzOK = checkForValidAzimuth();   // is the az between 0 and 360
       if (AzOK)
       {
-        long targetPosition = TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move.
-        
+        long targetPosition = TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move
+                                                               // in order to reach the target
         //  Serial.println();
         //  Serial.print("in slewto target received ");
         //  Serial.println(TargetAzimuth);
@@ -405,10 +404,12 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
         receivedData = "";
 
       } // end if azok
-      // set messages       
+
+      // set messages for the data packet to be sent to the monitor program      
       movementstate = "Moving"; // for updating the datapacket
       TargetMessage = "Awaiting Target ";
-    } // end if SA
+
+    } // end if Slew to Azimuth
 
     //**********************************************************
     //******** code for SL process below ***********************
@@ -421,7 +422,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
 
       if (Slewing | homing)
       {
-        ASCOM.print("Moving#");
+        ASCOM.print("Moving#");   // sent to ASCOM serial and picked up by the ASCOM driver
         // stepper.run();
       }
       else
@@ -446,7 +447,8 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
        stepper.setCurrentPosition(0);          // wherever the motor is now is set to position 0
        stepper.setAcceleration(normalAcceleration/2.0); // half normal for homing
 
-       stepper.moveTo(150000000);              // todo needs change
+       stepper.moveTo(150000000);              // todo may need change to ensure at least a full rotation 
+                                               // of the dome is made
 
        domePowerOn(); 
        homing = true;                          // used in loop() to control motor movement
@@ -470,37 +472,35 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     
     stepper.run();
 
-    
-
-    check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor
+    check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor program
 
   }  // endif Slewing
 
-if (homing)
-{
-  if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
+  if (homing)
   {
-    getCurrentAzimuth();                      
-    azimuthTimerInterval = millis();
-    //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
-    //ASCOM.println(homeSensor);
-  }
+    if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
+    {
+      getCurrentAzimuth();                      
+      azimuthTimerInterval = millis();
+      //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
+      //ASCOM.println(homeSensor);
+    }
 
-  if (homeSensor == true)                     // true indicates the sensor at the home position has been activated
-  {
-    movementstate = "Not Moving";
-    QueryDir      = "None";
-    TargetMessage = "Homing Complete";
-    homing        = false;
-    homeSensor    = false;      //homing is finished, so set the sensor to false. It may be set true again by calls to getcurrentazimuth()
-    //load and try
-    domePowerOff();
-  }
+    if (homeSensor == true)                     // true indicates the sensor at the home position has been activated
+    {
+      movementstate = "Not Moving";
+      QueryDir      = "None";
+      TargetMessage = "Homing Complete";
+      homing        = false;
+      homeSensor    = false;      // homing is finished, so set the sensor to false. 
+
+      domePowerOff();
+     }
 
 
-}
+  }  // endif homing
 
- // create / update the data packet for monitoring program
+    // create / update the data packet for monitoring program
     //
     if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves and tick the heartbeat LED
     {
@@ -541,7 +541,7 @@ String WhichDirection()
   // optimises battery use by the motor.
 
   CurrentAzimuth = getCurrentAzimuth(); // this comes from the encoder
-  // azimuth = CurrentAzimuth;          //save this to work out the distance to go
+  
   int clockwiseSteps = calculateClockwiseSteps();
   int antiClockwiseSteps = 360 - clockwiseSteps;
 
@@ -574,14 +574,10 @@ void check_If_SlewingTargetAchieved()
     if (stepper.distanceToGo() == 0 )
     {
       
-      Slewing = false;              // used to stop the motor in main loop
-      movementstate = "Stopped.  "; // for updating the lcdpanel
-
-      // Serial.print("ABS STEPPER distance to go....");
-      // Serial.println();
-      
+      Slewing       = false;          // used to stop the motor in main loop
+      movementstate = "Stopped.  ";   // Set the variables for the data packet
       TargetMessage = "Target achieved ";
-      QueryDir = "None";
+      QueryDir      = "None";
 
       domePowerOff(); // power off the stepper now that the target is reached.
     }
@@ -672,7 +668,7 @@ uint16_t encoder()
   // i.e number of ticks per degree
 
   // some error checking
-  if (Azimuth < 1)
+  if (Azimuth < 1.0)
   {
     Azimuth = 1.0;
   }
@@ -724,9 +720,14 @@ void interrupt() // Interrupt function
 void WestSync()
 {
   // this routine is called when the westsync interrupt fires
-  A_Counter = ticksperDomeRev / 4.0;
-  homeSensor=true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
-  syncCount ++;
+  
+  A_Counter = ticksperDomeRev / (360.0 / 261.0); // the position of due west - 261 (calculation checked)
+                                                 // for the dome when the scope is at 270.
+
+  homeSensor=true;                               // set this when the hall sensor is detected.
+                                                 // It indicates the dome is at the home (261) degrees
+                                                 // position when the homing process runs
+  syncCount ++;                                  // used to indicate a sync event for the monitor program
 }
 void heartBeat()
 {
