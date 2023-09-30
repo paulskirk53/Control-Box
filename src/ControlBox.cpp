@@ -136,7 +136,7 @@ uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
 float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the 
                                 // number of encoder wheel rotations for one dome rev. 11-9-21
-
+float ticksPerDegree  = ticksperDomeRev / 360.0;  // do the calculation once here
 bool cameraPowerState = off;
 
 
@@ -664,8 +664,8 @@ uint16_t encoder()
     A_Counter = A_Counter - ticksperDomeRev;
   }
 
-  Azimuth = float(A_Counter) / (ticksperDomeRev / 360.0); // (ticks for one dome rev) / 360 (degrees) - about 29
-  // i.e number of ticks per degree
+  Azimuth = float(A_Counter) / (ticksPerDegree); // (ticks for one dome rev) / 360 (degrees) - about 29
+                                                 // i.e number of ticks per degree
 
   // some error checking
   if (Azimuth < 1.0)
