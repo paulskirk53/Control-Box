@@ -149,7 +149,7 @@ void setup()
 {
 //Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
-  digitalWrite(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
+  digitalWriteFast(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
   pinMode(9, INPUT_PULLUP);     // see the notes in github. this pulls up the serial Rx pin to 5v.
   pinMode(ledpin, OUTPUT);
 
@@ -162,7 +162,7 @@ void setup()
   pinMode(CameraPower, OUTPUT);
 
   //turn the camera power of at startup:
-  digitalWrite (CameraPower, LOW);           //  LOW is camera power OFF
+  digitalWriteFast (CameraPower, LOW);           //  LOW is camera power OFF
 
  // encoder:
   pinMode(A_PHASE, INPUT_PULLUP);
@@ -613,7 +613,7 @@ void createDataPacket()
 
 void domePowerOn() // set the dome power SSR gate high
 {
-  digitalWrite(power_pin, HIGH);
+  digitalWriteFast(power_pin, HIGH);
 
   delay(2000); // gives time for the MA860H unit to power on and stabilise
 }
@@ -622,7 +622,7 @@ void domePowerOn() // set the dome power SSR gate high
 
 void domePowerOff() // set the dome power SSR gate low
 {
-  digitalWrite(power_pin, LOW);
+  digitalWriteFast(power_pin, LOW);
 }
 
 void resetViaSWR()
@@ -634,9 +634,9 @@ void lightup()
 {
   for (int i = 0; i < 10; i++)
   {
-    digitalWrite(ledpin, HIGH);
+    digitalWriteFast(ledpin, HIGH);
     delay(500);
-    digitalWrite(ledpin, LOW);
+    digitalWriteFast(ledpin, LOW);
     delay(500);
   }
   
@@ -696,7 +696,7 @@ bool PowerForCamera(bool State)
   }
   else
   {
-    digitalWrite(CameraPower, LOW); //NB as above
+    digitalWriteFast(CameraPower, LOW); //NB as above
     cameraPowerState = off;
   }
 }
@@ -705,8 +705,8 @@ void interrupt() // Interrupt function
 {
 
   char i, j;
-  i = digitalRead(B_PHASE);
-  j = digitalRead(A_PHASE);
+  i = digitalReadFast(B_PHASE);
+  j = digitalReadFast(A_PHASE);
   if (i == j)
   {
     A_Counter -= 1;
@@ -733,10 +733,10 @@ void heartBeat()
   
   if ( digitalReadFast(ledpin))
     {
-      digitalWrite(ledpin, LOW);
+      digitalWriteFast(ledpin, LOW);
     }
     else
     {
-      digitalWrite(ledpin, HIGH);
+      digitalWriteFast(ledpin, HIGH);
     }
 }
