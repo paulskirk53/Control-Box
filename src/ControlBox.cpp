@@ -145,7 +145,7 @@ void setup()
 {
 //Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
-  digitalWrite(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
+  digitalWriteFast(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
   pinMode(9, INPUT_PULLUP);     // see the notes in github. this pulls up the serial Rx pin to 5v.
   pinMode(ledpin, OUTPUT);
 
@@ -158,7 +158,7 @@ void setup()
   pinMode(CameraPower, OUTPUT);
 
   //turn the camera power of at startup:
-  digitalWrite (CameraPower, LOW);           //  LOW is camera power OFF
+  digitalWriteFast (CameraPower, LOW);           //  LOW is camera power OFF
 
  // encoder:
   pinMode(A_PHASE, INPUT_PULLUP);
@@ -658,7 +658,7 @@ void createDataPacket()
 
 void domePowerOn() // set the dome power SSR gate high
 {
-  digitalWrite(power_pin, HIGH);
+  digitalWriteFast(power_pin, HIGH);
 
   delay(2000); // gives time for the MA860H unit to power on and stabilise
 }
@@ -667,7 +667,7 @@ void domePowerOn() // set the dome power SSR gate high
 
 void domePowerOff() // set the dome power SSR gate low
 {
-  digitalWrite(power_pin, LOW);
+  digitalWriteFast(power_pin, LOW);
 }
 
 void resetViaSWR()
@@ -679,9 +679,9 @@ void lightup()
 {
   for (int i = 0; i < 10; i++)
   {
-    digitalWrite(ledpin, HIGH);
+    digitalWriteFast(ledpin, HIGH);
     delay(500);
-    digitalWrite(ledpin, LOW);
+    digitalWriteFast(ledpin, LOW);
     delay(500);
   }
   
@@ -736,12 +736,12 @@ bool PowerForCamera(bool State)
 {
   if (State)
   {
-    digitalWrite(CameraPower, HIGH);  //
+    digitalWriteFast(CameraPower, HIGH);  //
     cameraPowerState = on;
   }
   else
   {
-    digitalWrite(CameraPower, LOW); //NB as above
+    digitalWriteFast(CameraPower, LOW); //NB as above
     cameraPowerState = off;
   }
 }
@@ -750,8 +750,8 @@ void interrupt() // Interrupt function
 {
 
   char i, j;
-  i = digitalRead(B_PHASE);
-  j = digitalRead(A_PHASE);
+  i = digitalReadFast(B_PHASE);
+  j = digitalReadFast(A_PHASE);
   if (i == j)
   {
     A_Counter -= 1;
@@ -769,8 +769,12 @@ void interrupt() // Interrupt function
 void WestSync()
 {
   // this routine is called when the westsync interrupt fires
-  A_Counter = ticksperDomeRev / 4.0;
-  homeSensor=true;   //set this when the hall sesnor is detected. It indicates the dome is at the home (261) degrees position when the homing process runs
+  
+  A_Counter = ticksperDomeRev / (360.0 / 261.0); // the position of due west - 261 (calculation checked)
+                                                 // for the dome when the scope is at 270.
+  
+  homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
+                                      // the dome is at the home (261) degrees position when the homing process runs
   syncCount ++;
 }
 void heartBeat()
@@ -778,10 +782,10 @@ void heartBeat()
   
   if ( digitalReadFast(ledpin))
     {
-      digitalWrite(ledpin, LOW);
+      digitalWriteFast(ledpin, LOW);
     }
     else
     {
-      digitalWrite(ledpin, HIGH);
+      digitalWriteFast(ledpin, HIGH);
     }
 }
