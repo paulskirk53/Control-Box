@@ -79,11 +79,11 @@ void heartBeat();
 // end declarations
 // defines for the encoder inclusion
 #define power_pin 2   
-#define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
+#define A_PHASE 4      // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
 #define B_PHASE 5
 #define CameraPower 6  // power for the imaging camera
-#define dirPin 10  // connection for motor direction signal
-#define stepPin 11  // connection for motor step signal
+#define dirPin 10      // connection for motor direction signal
+#define stepPin 11     // connection for motor step signal
 
 
 #define WestPin 29        // sync connection for dome
@@ -103,17 +103,17 @@ AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
 String receivedData;
 boolean DoTheDeceleration;
-boolean Slewing; // controls whether the stepper is stepped in the main loop
+boolean Slewing;                 // controls whether the stepper is stepped in the main loop
 boolean homing = false;
 boolean homeSensor = false;
-float StepsPerSecond; // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
+float StepsPerSecond;            // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
 
 boolean TargetChanged = false;
 boolean monitorSendFlag = false; // this only becomes true after the MCU is connected successfully and when true, the data stream to the monitor program is enabled
 float normalAcceleration;        // was incorrectly set to data type int
 
 int stepsToTarget = 0;
-int DecelValue = 400; // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
+int DecelValue = 400;            // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
 int EncoderReplyCounter = 0;
 int savedAzimuth = 0;
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
@@ -131,8 +131,9 @@ volatile int syncCount = 0; // counts the number of syncs and acts as an indicat
 float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
 uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
-float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the number of encoder wheel rotations for one dome rev. 11-9-21
-
+float ticksperDomeRev = 25880;  // was 10513 (changed 20/4/22) this was worked out empirically by counting the number 
+                                // of encoder wheel rotations for one dome rev. 11-9-21
+float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
 bool cameraPowerState = off;
 
 
@@ -689,13 +690,13 @@ void lightup()
 bool checkForValidAzimuth()
 {
   if ( (TargetAzimuth >= 0) && (TargetAzimuth <=359) )
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
 }
 
 
@@ -713,11 +714,11 @@ uint16_t encoder()
     A_Counter = A_Counter - ticksperDomeRev;
   }
 
-  Azimuth = float(A_Counter) / (ticksperDomeRev / 360.0); // (ticks for one dome rev) / 360 (degrees) - about 29
-  // i.e number of ticks per degree
+  Azimuth = float(A_Counter) / (ticksPerDegree); // (ticks for one dome rev) / 360 (degrees) - about 29
+                                                          // i.e number of ticks per degree
 
   // some error checking
-  if (Azimuth < 1)
+  if (Azimuth < 1.0)
   {
     Azimuth = 1.0;
   }
@@ -753,16 +754,16 @@ void interrupt() // Interrupt function
   i = digitalReadFast(B_PHASE);
   j = digitalReadFast(A_PHASE);
   if (i == j)
-  {
-    A_Counter -= 1;
-  }
+    {
+      A_Counter -= 1;
+    }
 
   else
-  {
+    {
 
-    A_Counter += 1; // increment the counter which represents increasing dome angle
+      A_Counter += 1; // increment the counter which represents increasing dome angle
 
-  } // end else clause
+    } // end else clause
 } // end void interrupt
 
 
