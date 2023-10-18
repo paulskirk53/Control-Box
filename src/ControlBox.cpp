@@ -1,6 +1,9 @@
 /*
-com42 ASCOM
-Com6 monitor
+
+
+NOte re encoder calibration:
+see this spreadsheet for calcuations of ticks per dome revolution - google sheets 'encoder ticks per dome rev'
+
 Next steps: 
 1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
@@ -131,8 +134,8 @@ volatile int syncCount = 0; // counts the number of syncs and acts as an indicat
 float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
 uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
-float ticksperDomeRev = 25880;  // was 10513 (changed 20/4/22) this was worked out empirically by counting the number 
-                                // of encoder wheel rotations for one dome rev. 11-9-21
+float ticksperDomeRev = 15675;  // a dome rotation shows the wheel on the encoder turns through 26.125 turns. Use the spreadsheet 
+                                // mentioned at top, to calculate the number of ticks (for this current encoder 26.125 * 600)
 float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
 bool cameraPowerState = off;
 
