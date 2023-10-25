@@ -77,7 +77,7 @@ uint16_t encoder();
 bool PowerForCamera(bool State);
 void interrupt();
 void WestSync();
-void heartBeat();
+void ledToggle();
 
 // end declarations
 // defines for the encoder inclusion
@@ -238,12 +238,13 @@ void loop()
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
-    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet with all the monitoring data
+    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet 
     {
-      
+     
       Monitor.print(dataPacket);
-     // Monitor.print("arse");
+          
     }
+    
 
     //*************************************************************************
     //******** code for Monitor MCU Identity process below **********************
@@ -515,7 +516,7 @@ if (homing)
     {
       
       
-      heartBeat();
+      ledToggle();
       LedTimerInterval = millis();
     }
 
@@ -649,7 +650,7 @@ void createDataPacket()
   CurrentAzimuth = getCurrentAzimuth(); 
       
   //eight items below
-  
+  // dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
   dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
@@ -781,7 +782,7 @@ void WestSync()
                                       // the dome is at the home (261) degrees position when the homing process runs
   syncCount ++;
 }
-void heartBeat()
+void ledToggle()
 {
   
   if ( digitalReadFast(ledpin))
