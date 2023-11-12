@@ -57,7 +57,7 @@ https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMC
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
 #include "linkedList.h"
-
+#include <avr/eeprom.h>
 
 // Forward declarations
 
@@ -103,6 +103,14 @@ void ledToggle();
 // Define a stepper and the pins it will use
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
+
+// EEPROM vars for storing the Azimuth and Toggle
+uint16_t EEMEM NonVolatileAzimuth;
+uint16_t EEMEM NonVolatileToggle;
+// SRAM Vars paired to the above
+uint16_t SRAMAzimuth;
+uint16_t SRAMToggle;
+
 
 String receivedData;
 boolean DoTheDeceleration;
@@ -177,11 +185,23 @@ void setup()
   
   attachInterrupt(digitalPinToInterrupt(WestPin), WestSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
 
-  A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
+// Read the EEPROM to check whether this is a power cycled startup (toggle != 1) or a software reset (via the monitor program, Toggle = 1)
+
+SRAMAzimuth = eeprom_read_word(&NonVolatileAzimuth);
+SRAMToggle  = eeprom_read_word(&NonVolatileToggle);
+
+if (SRAMToggle != 1 )
+  {
+    // initial power cycled starts execute the line below
+    A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
+  }
+  else
+  {
+    // software resets execute the line below, which preserves the dome azimuth at point of reset.
+    A_Counter = ticksperDomeRev / (360.0 / float(SRAMAzimuth) );  // set the azimuth to the value stored in EEPROM
+  }
 
   PowerForCamera(off); // camera power is off by default
-
-
 
   stepper.stop(); // set initial state as stopped
 
@@ -265,7 +285,10 @@ void loop()
     if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
       Monitor.print("resetting");
-      // ASCOM.print("get this");
+      // preserve  the dome azimuth and set the reset Toggle in EPROM
+      eeprom_update_word(&NonVolatileAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM
+      eeprom_update_word(&NonVolatileToggle, 1 );  // write a 1 to te toggle in EEPROM to signify a software reset has taken place
+
       delay(1000);   //
       resetViaSWR();
     }
@@ -472,8 +495,6 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
 
     stepper.run();
 
-    
-
     check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor
 
   }  // endif Slewing
@@ -514,7 +535,6 @@ if (homing)
 
     if ((millis() - LedTimerInterval) > 20000.0) // twenty second timer for a led flash - an indicator that code is running
     {
-      
       
       ledToggle();
       LedTimerInterval = millis();
