@@ -260,9 +260,7 @@ void loop()
 
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet 
     {
-     
       Monitor.print(dataPacket);
-          
     }
     
 
@@ -310,6 +308,13 @@ if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power o
        PowerForCamera(off);
        //Monitor.print("rec'd camOFF");
     }
+
+   // 
+if (monitorReceipt.indexOf("eepromtoggle", 0) > -1)   // the toggle will be set to zero which is used to indicate a power down reset - no preservation of the dome azimuth
+    {                                                     // at the time of reset i.e. this would be an end of observing session power down
+      eeprom_update_word(&NonVolatileToggle, 0);
+    }
+
 
   } // endif Monitor.available
 
