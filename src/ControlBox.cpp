@@ -190,15 +190,16 @@ void setup()
 SRAMAzimuth = eeprom_read_word(&NonVolatileAzimuth);
 SRAMToggle  = eeprom_read_word(&NonVolatileToggle);
 
-if (SRAMToggle != 1 )
-  {
-    // initial power cycled starts execute the line below
-    A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
-  }
-  else
+
+if (SRAMToggle == 1 )
   {
     // software resets execute the line below, which preserves the dome azimuth at point of reset.
     A_Counter = ticksperDomeRev / (360.0 / float(SRAMAzimuth) );  // set the azimuth to the value stored in EEPROM
+  }
+  else
+  {
+    // initial power cycled starts execute the line below
+    A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
   }
 
   PowerForCamera(off); // camera power is off by default
