@@ -79,7 +79,7 @@ void heartBeat();
 // end declarations
 // defines for the encoder inclusion
 #define power_pin 2   
-#define A_PHASE 4 // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
+#define A_PHASE 4      // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
 #define B_PHASE 5
 #define CameraPower 6  // power for the imaging camera
 #define dirPin 10      // connection for motor direction signal
@@ -121,6 +121,15 @@ long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
 long stepsPerDegree       =10;   //todo find the real value and update this statement
+// e.g. process for defining the above:
+/*
+use arduino sermon for control and comms
+start at say 270 degrees
+set stepsPerDegree = some value x (try 400) and then upload the code.
+SA90# from a known position say 270 and end up at position y - this will give a value of steps used to move the dome z = y-270 degrees
+calculate stepsPerDegree as x/ z  and ASCOM.print it
+Now set this value in the code (line 123 in this file) and try a slew from 270 to 90 (180 degrees) to see how accurate the figure is. It might need adjusting?
+*/
 String TargetMessage = "No Target";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
