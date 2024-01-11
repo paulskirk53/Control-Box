@@ -1,6 +1,7 @@
 /*
-com42 ASCOM
-Com6 monitor
+Problem todo - the code sends the motor to the target position, but no check is made of the Azimuth value. Perhaps a check of azimuth, then move would be best.
+this could be iterated.
+
 Next steps: 
 1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
