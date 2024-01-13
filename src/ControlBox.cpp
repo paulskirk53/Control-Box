@@ -28,9 +28,8 @@ Note Note Note Note Note Note
 
 /*
 
-AVR4809 pinout for the control box - see the google sheet 
+AVR4809 pinout for the control box - see the mailbox sheet 
 
-https://docs.google.com/spreadsheets/d/1RLFg1F5WgP97Ck7IOUJbF8Lhts_1J4T0fl-OKxMCbDc/edit#gid=0
 
 */
 
