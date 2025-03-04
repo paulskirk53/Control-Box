@@ -1,9 +1,13 @@
 /*
+comment on review of this code 4-3-2025
+It looks like this code is ready to test - need to do the calculation of steps per degree of dome movement as per todo below, then try it out.
+Make a completely separate control box so that in the event it fails the working control box can be reinstated. They should be pin compatible.
+
 Problem todo - the code sends the motor to the target position, but no check is made of the Azimuth value. Perhaps a check of azimuth, then move would be best.
 this could be iterated.
 
 Next steps: 
-1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
+1 - (done) put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
     The monitor program informs the data which is needed in the packet
     the target az -     targetazimuth
@@ -581,7 +585,9 @@ int getCurrentAzimuth()
 void check_If_SlewingTargetAchieved()
 {
 
-    if (stepper.distanceToGo() == 0 )
+    if (stepper.distanceToGo() == 0 )  // todo probably need to check azimuth here e.g. add to conition && azimuth within a range of say three degrees of target
+    // if the slew is out by x degrees, nudge in appropriate direction by the number of steps corresponding to x degrees.
+    // however, if the numbers of steps per degree is accurate and the drive does not stall thereby missing steps, the target azimuth should be good. :)
     {
       
       Slewing       = false;          // used to stop the motor in main loop
@@ -649,7 +655,8 @@ void lightup()
 }
 bool checkForValidAzimuth()
 {
-  if ( (TargetAzimuth >= 0) && (TargetAzimuth <=359) )
+  if ( (TargetAzimuth >= 0) && (TargetAzimuth <=359) )  // todo suggest that 360 is a valid azimuth and may be requested by the ASCOM driver, so 359 needs change to 360
+  // not sure of any wider impact though so haven't changed at time of this comment 4-3-2025
   {
     return true;
   }
