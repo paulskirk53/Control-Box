@@ -77,6 +77,7 @@ bool PowerForCamera(bool State);
 void interrupt();
 void WestSync();
 void ledToggle();
+void syncToAzimuth(int syncAzimuth);
 
 // end declarations
 // defines for the encoder inclusion
@@ -489,6 +490,21 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
 
     }
 
+    //************************************************************
+    //******** code for STA process below  ***********************
+    //******** Data sent by ASCOM STA999#  ***********************
+    //****** don't confuse this with Slew to Azimuth - SA999 *****
+    //************************************************************
+    //************************************************************
+
+    if (receivedData.indexOf("STA", 0) > -1)
+      {
+        int syncAzimuth;
+        receivedData.remove(0, 3);           //strip off the first three characters as they are not numeric
+        syncAzimuth = receivedData.toInt();  // convert the umeric part to int
+        syncToAzimuth(syncAzimuth);          // call the routine which syncs the azimuth
+      }
+
   } // end if ASCOM Available
 
   // so from here down is code to deliver SA function
@@ -818,4 +834,12 @@ void ledToggle()
     {
       digitalWriteFast(ledpin, HIGH);
     }
+}
+void syncToAzimuth(int syncAzimuth)
+{
+  // this routine is called when the ASCOM driver sends STA999 - sync to azimuth
+  (float)syncAzimuth;
+  A_Counter = ticksperDomeRev / (360.0 / syncAzimuth); // change the value of the global var A_Counter which is used to calculate Azimuth
+ // test print todo remove or comment out
+ ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
 }
