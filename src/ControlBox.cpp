@@ -503,6 +503,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
         receivedData.remove(0, 3);           //strip off the first three characters as they are not numeric
         syncAzimuth = receivedData.toInt();  // convert the umeric part to int
         syncToAzimuth(syncAzimuth);          // call the routine which syncs the azimuth
+        receivedData = "";
       }
 
   } // end if ASCOM Available
@@ -841,5 +842,5 @@ void syncToAzimuth(int syncAzimuth)
   (float)syncAzimuth;
   A_Counter = ticksperDomeRev / (360.0 / syncAzimuth); // change the value of the global var A_Counter which is used to calculate Azimuth
  // test print todo remove or comment out
- ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
+ // ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
 }
