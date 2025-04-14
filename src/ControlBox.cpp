@@ -199,7 +199,7 @@ if (SRAMToggle == 1 )
   else
   {
     // initial power cycled starts execute the line below
-    A_Counter = ticksperDomeRev / (360.0 / 261.0); //  the position of due west - 261 (calculation checked) for the dome when the scope is at 270.
+    A_Counter = ticksperDomeRev / (360.0 / 270.0); //  the position of due west 
   }
 
   PowerForCamera(off); // camera power is off by default
@@ -774,7 +774,9 @@ uint16_t encoder()
     Azimuth = 360.0;
   }
 
-  integerAzimuth = Azimuth; // REMEMBER Azimuth needs to be float due to effects of integer arithmetic.
+  integerAzimuth = (int)Azimuth; // REMEMBER Azimuth needs to be float due to effects of integer arithmetic.
+Serial.println("Integer azimuth is " + integerAzimuth);
+
   return integerAzimuth;
 } // end void encoder
 
@@ -793,7 +795,7 @@ bool PowerForCamera(bool State)
   }
 }
 
-void interrupt() // Interrupt function
+void interrupt() // Interrupt function 
 {
 
   char i, j;
@@ -817,8 +819,8 @@ void WestSync()
 {
   // this routine is called when the westsync interrupt fires
   
-  A_Counter = ticksperDomeRev / (360.0 / 261.0); // the position of due west - 261 (calculation checked)
-                                                 // for the dome when the scope is at 270.
+  A_Counter = ticksperDomeRev / (360.0 / 270.0); // the position of due west 
+                                                 
   
   homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
                                       // the dome is at the home (261) degrees position when the homing process runs
