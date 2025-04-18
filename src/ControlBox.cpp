@@ -105,7 +105,7 @@ void syncToAzimuth(int syncAzimuth);
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
 // EEPROM vars for storing the Azimuth and Toggle
-uint16_t EEMEM NonVolatileAzimuth;
+uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
 uint16_t EEMEM NonVolatileToggle;
 // SRAM Vars paired to the above
 uint16_t SRAMAzimuth;
