@@ -775,7 +775,7 @@ uint16_t encoder()
   }
 
   integerAzimuth = (int)Azimuth; // REMEMBER Azimuth needs to be float due to effects of integer arithmetic.
-Serial.println("Integer azimuth is " + integerAzimuth);
+// 
 
   return integerAzimuth;
 } // end void encoder
