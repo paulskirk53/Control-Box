@@ -144,6 +144,7 @@ uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
 float ticksperDomeRev = 15675;  // a dome rotation shows the wheel on the encoder turns through 26.125 turns. Use the spreadsheet 
                                 // mentioned at top, to calculate the number of ticks (for this current encoder 26.125 * 600)
+                                //about to change for a toothed wheel. the new ticks number is 26540 old wheel diameter 74.5mm, new wheel diameter 44mm
 float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
 bool cameraPowerState = off;
 
