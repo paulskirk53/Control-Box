@@ -142,7 +142,9 @@ volatile int syncCount = 0; // counts the number of syncs and acts as an indicat
 float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
 uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
-float ticksperDomeRev = 15675;  // a dome rotation shows the wheel on the encoder turns through 26.125 turns. Use the spreadsheet 
+                            // with the new 27-4-25 toothed wheel there are 40.92 rotations of the wheel for a complete dome rev
+                            // so 40.92 x 600 = 24552 - try that
+float ticksperDomeRev = 24552;  // previous friction wheel value 15675  a dome rotation shows the old friction wheel on the encoder turns through 26.125 turns. Use the spreadsheet 
                                 // mentioned at top, to calculate the number of ticks (for this current encoder 26.125 * 600)
                                 //about to change for a toothed wheel. the new ticks number is 26540 old wheel diameter 74.5mm, new wheel diameter 44mm
 float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
@@ -200,7 +202,7 @@ if (SRAMToggle == 1 )
   else
   {
     // initial power cycled starts execute the line below
-    A_Counter = ticksperDomeRev / (360.0 / 270.0); //  the position of due west 
+    A_Counter = ticksperDomeRev / (360.0 / 255.0); //  the position where the scope and dome see eye to eye when the scope az is 270
   }
 
   PowerForCamera(off); // camera power is off by default
