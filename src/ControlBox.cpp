@@ -142,11 +142,10 @@ volatile int syncCount = 0; // counts the number of syncs and acts as an indicat
 float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
 uint16_t integerAzimuth;    // this is what is returned from the encoder routine
                             // and also because we really don't need fractional degrees for dome movement.
-                            // with the new 27-4-25 toothed wheel there are 40.92 rotations of the wheel for a complete dome rev
-                            // so 40.92 x 600 = 24552 - try that
-float ticksperDomeRev = 24552;  // previous friction wheel value 15675  a dome rotation shows the old friction wheel on the encoder turns through 26.125 turns. Use the spreadsheet 
-                                // mentioned at top, to calculate the number of ticks (for this current encoder 26.125 * 600)
-                                //about to change for a toothed wheel. the new ticks number is 26540 old wheel diameter 74.5mm, new wheel diameter 44mm
+                                                        
+float ticksperDomeRev = 20700;  // 12-9-25 : The encoder is now attached to the base of the stepper motor shaft. The shaft rotates 34.5 turns for one dome rotation
+                                // so the ticks per dome rev are 34.5 x 600 = 20,700
+                                //
 float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
 bool cameraPowerState = off;
 
