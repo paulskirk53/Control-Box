@@ -273,7 +273,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request 
+    else if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request 
     {
       Monitor.print("monitorcontrol#");
     }
@@ -283,7 +283,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
+    else if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
       Monitor.print("resetting");
       // preserve  the dome azimuth and set the reset Toggle in EPROM
@@ -300,20 +300,20 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-if (monitorReceipt.indexOf("CAMON", 0) > -1)     // turn imaging camera power on
+    else if (monitorReceipt.indexOf("CAMON", 0) > -1)     // turn imaging camera power on
     {
        PowerForCamera(on);
        //Monitor.print("rec'd camon");
     }
 
-if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power off
+    else if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power off
     {
        PowerForCamera(off);
        //Monitor.print("rec'd camOFF");
     }
 
    // 
-if (monitorReceipt.indexOf("eepromtoggle", 0) > -1)   // the toggle will be set to zero which is used to indicate a power down reset - no preservation of the dome azimuth
+     else if (monitorReceipt.indexOf("eepromtoggle", 0) > -1)   // the toggle will be set to zero which is used to indicate a power down reset - no preservation of the dome azimuth
     {                                                     // at the time of reset i.e. this would be an end of observing session power down
       eeprom_update_word(&NonVolatileToggle, 0);
     }
@@ -347,16 +347,7 @@ if (monitorReceipt.indexOf("eepromtoggle", 0) > -1)   // the toggle will be set 
       ASCOM.print(x);
     }
 
-//TEST LINES X BELOW TODO REMOVE
 
-/*
-if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and returns the distance to go to the serial monitor. The command is not used by ASCOm Driver
-    {
-      int x =  stepper.distanceToGo();
-      ASCOM.println(String(x) + "#");
-    }
-
-*/
 
     //*************************************************************************
     //******** code for ASCOM MCU Identity process below **********************
@@ -364,7 +355,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("controlbox", 0) > -1)
+    else if (receivedData.indexOf("controlbox", 0) > -1)
     {
       ASCOM.print("controlbox#");
     }
@@ -375,7 +366,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("ES", 0) > -1) // Emergency stop requested from C# driver
+    else if (receivedData.indexOf("ES", 0) > -1) // Emergency stop requested from C# driver
     {
       // lcd.clear();
       Emergency_Stop(CurrentAzimuth, "Received ES");
@@ -388,7 +379,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("SA", 0) > -1) //
+    else if (receivedData.indexOf("SA", 0) > -1) //
     {
 
       domePowerOn(); // turn on the power supply for the stepper motor
@@ -448,7 +439,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //**********************************************************
     //
 
-    if (receivedData.indexOf("SL", 0) > -1) //
+    else if (receivedData.indexOf("SL", 0) > -1) //
     {
 
       if (Slewing | homing)
@@ -470,7 +461,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************
     //*************************************************************
 
-    if (receivedData.indexOf("FH", 0) > -1)
+    else if (receivedData.indexOf("FH", 0) > -1)
     {
        StepsPerSecond = 300.0;                 // changed following empirical testing Oct 2020
        normalAcceleration = 140.0;             // changed following empirical testing October 17th 2020 - changed from 40 to 20 for trial
@@ -499,7 +490,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //************************************************************
     //************************************************************
 
-    if (receivedData.indexOf("STA", 0) > -1)
+    else if (receivedData.indexOf("STA", 0) > -1)
       {
         int syncAzimuth;
         receivedData.remove(0, 3);           //strip off the first three characters as they are not numeric
@@ -567,18 +558,6 @@ if (homing)
 
   stepper.run();   // stepper run - works for slewing and for findHome
 
-/*
-remove the code between //start and //end below - it was inserted as a way of simulating the home position for testing
-
-
-
-//start
-if ( (Azimuth > 260.0) && (Azimuth <265) )
-{
-  homeSensor = true;
-}
-
-*/
 
 //end
 
