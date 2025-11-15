@@ -354,11 +354,15 @@ void loop()
     //**** Used by the ASCOM driver to identify the COM port in use. **********
     //*************************************************************************
     //*************************************************************************
-
-    else if (receivedData.indexOf("controlbox", 0) > -1)
+    else if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)
     {
       ASCOM.print("controlbox#");
     }
+
+   //  else if (receivedData.indexOf("controlbox", 0) > -1  )
+   //  {
+   //    ASCOM.print("controlbox#");
+   //  }
 
     //*************************************************************************
     //******** code for emergency stop process below **************************
