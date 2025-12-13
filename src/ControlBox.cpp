@@ -164,6 +164,8 @@ bool cameraPowerState = off;
 
 void setup()
 {
+  //todo Dec' 2025 add in the code which writes to eeprom from the master branch
+
 //Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
   digitalWriteFast(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
