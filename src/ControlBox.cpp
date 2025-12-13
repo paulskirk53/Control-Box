@@ -9,14 +9,17 @@ this could be iterated.
 Next steps: 
 1 - (done) put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
-    The monitor program informs the data which is needed in the packet
-    the target az -     targetazimuth
-    movement direction  querydir   
-    movement status     movementstate
-    target status?      targetmessage
-    Degrees to target   String(CDArray[CurrentAzimuth])
-    Dome Azimuth        getcurrentazimuth()  ??
-    Camera power state  cameraPowerState
+    the list below checked against the current master branch code December 2025 and accurately reflects the data message required by
+    the monitor program as of 13-12-25
+
+    The current Azimuth       - CurrentAzimuth
+    The target Az.            - TargetAzimuth
+    Moving to target?         - movementstate 
+    which direction to rotate - QueryDir 
+    Target status             - TargetMessage 
+    degrees to target         - CDArray[CurrentAzimuth] 
+    camera power              - cameraPowerState 
+    a heartbeat counter       - syncCount
 
 2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR
 
@@ -345,8 +348,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)   //(receivedData.indexOf("controlbox", 0) > -1)  // this data exchange used to id the comport
-    {                                                //  used for the ASCOM connection
+    if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)   //  used for the ASCOM connection
       ASCOM.print("controlbox#");
     }
 
