@@ -345,7 +345,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("controlbox", 0) > -1)  // this data exchange used to id the comport
+    if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)   //(receivedData.indexOf("controlbox", 0) > -1)  // this data exchange used to id the comport
     {                                                //  used for the ASCOM connection
       ASCOM.print("controlbox#");
     }
