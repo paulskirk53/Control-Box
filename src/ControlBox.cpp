@@ -16,7 +16,7 @@ Next steps:
     Dome Azimuth        getcurrentazimuth()  ??
     Camera power state  cameraPowerState
 
-2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR
+2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR - done
 
 Note Note Note Note Note Note
 
@@ -104,10 +104,10 @@ void syncToAzimuth(int syncAzimuth);
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
-// EEPROM vars for storing the Azimuth and Toggle
+// EEPROM vars for storing the Azimuth and Toggle todo add in another var for homeposition
 uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
 uint16_t EEMEM NonVolatileToggle;
-// SRAM Vars paired to the above
+// SRAM Vars paired to the above - todo add in another var for homeposition
 uint16_t SRAMAzimuth;
 uint16_t SRAMToggle;
 
@@ -200,6 +200,7 @@ if (SRAMToggle == 1 )
   }
   else
   {
+    // todo - scrap the hard coded 255 - a nightmare 
     // initial power cycled starts execute the line below
     A_Counter = ticksperDomeRev / (360.0 / 255.0); //  the position where the scope and dome see eye to eye when the scope az is 270
   }
@@ -317,7 +318,8 @@ void loop()
     {                                                     // at the time of reset i.e. this would be an end of observing session power down
       eeprom_update_word(&NonVolatileToggle, 0);
     }
-
+    // todo add in a monitor receipt of HP (home position) this will receive HP999# from the Monitor datastream and store the value received in EEPROM
+    // check that 0 <= value received <=360 store as integer
 
   } // endif Monitor.available
 
@@ -535,7 +537,8 @@ if (homing)
     TargetMessage = "Homing Complete";
     homing        = false;
     homeSensor    = false;      //homing is finished, so set the sensor to false. It may be set true again by calls to getcurrentazimuth()
-    //load and try
+    // todo set the azimuth  to the home position - set this in EEPROM from the monitor programme & read it here
+    // todo 2 - set targetazimuth = currentazimuth so that the code sees no difference, which would cause a slew to azimuth
     domePowerOff();
   }
 
@@ -800,15 +803,16 @@ void interrupt() // Interrupt function
 } // end void interrupt
 
 
-void WestSync()
+void WestSync()  // todo consider calling this routine homesync
 {
   // this routine is called when the westsync interrupt fires
-  
+  // todo important - scrap the hardcoded 270 - a nightmare. set this value in EEPROM & read it
+  // the value can be sent from the monitor program and stored in EEPROM
   A_Counter = ticksperDomeRev / (360.0 / 270.0); // the position of due west 
                                                  
   
   homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
-                                      // the dome is at the home (261) degrees position when the homing process runs
+                                      // the dome is at the home position when the homing process runs
   syncCount ++;
 }
 void ledToggle()
