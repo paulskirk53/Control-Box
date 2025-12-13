@@ -146,13 +146,15 @@ String dataPacket = "";
 
 
 
-volatile long A_Counter;    // volatile because it's used in the interrupt routine
-volatile int syncCount = 0; // counts the number of syncs and acts as an indicator on the monitor program
-float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
-uint16_t integerAzimuth;    // this is what is returned from the encoder routine
-                            // and also because we really don't need fractional degrees for dome movement.
-float ticksperDomeRev = 25880;  //was 10513 (changed 20/4/22) this was worked out empirically by counting the 
-                                // number of encoder wheel rotations for one dome rev. 11-9-21
+volatile long A_Counter;        // volatile because it's used in the interrupt routine
+volatile int syncCount = 0;     // counts the number of syncs and acts as an indicator on the monitor program
+float Azimuth;                  // The data type is important to avoid integer arithmetic in the encoder() routine
+uint16_t integerAzimuth;        // this is what is returned from the encoder routine
+                                // and also because we really don't need fractional degrees for dome movement.
+float ticksperDomeRev = 20700;  // 12-9-25 (added here 13-12-25): The encoder is now attached to the base of the stepper motor shaft. 
+                                // The shaft rotates 34.5 turns for one dome rotation
+                                // so the ticks per dome rev are 34.5 x 600 = 20,700
+
 float ticksPerDegree  = ticksperDomeRev / 360.0;  // do the calculation once here
 bool cameraPowerState = off;
 
@@ -351,6 +353,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
     //*************************************************************************
 
     if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)   //  used for the ASCOM connection
+    {
       ASCOM.print("controlbox#");
     }
 
@@ -477,6 +480,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
       movementstate  = "Homing...";
 
       receivedData = "";
+    
 
     }
 
