@@ -1,4 +1,9 @@
 /*
+
+December 2025 some important TODOS added along with some notes - important changes are required :
+e.g. 1 - to find home
+     2 - to save the home position in EEPROM from a request sent by the monitor program
+
 comment on review of this code 4-3-2025
 It looks like this code is ready to test - need to do the calculation of steps per degree of dome movement as per todo below, then try it out.
 Make a completely separate control box so that in the event it fails the working control box can be reinstated. They should be pin compatible.
@@ -113,7 +118,7 @@ String receivedData;
 
 boolean Slewing; // controls whether the stepper is stepped in the main loop
 boolean homing = false;
-boolean homeSensor = false;
+boolean homeSensor = false;      // this is set true if Westsync interrupt fires - the home sensor
 float StepsPerSecond; // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
                       //NB as of summer '23 the controller is the TB6600
 
@@ -467,9 +472,10 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
        stepper.setMaxSpeed(StepsPerSecond);    // steps per second see below -
        stepper.setCurrentPosition(0);          // wherever the motor is now is set to position 0
        stepper.setAcceleration(normalAcceleration/2.0); // half normal for homing
-
-       stepper.moveTo(150000000);              // todo may need change to ensure at least a full rotation 
-                                               // of the dome is made
+       //todo we know the number of motor shaft steps per degree of dome movement, so calculate the number of steps for a 360 degree rotation from that
+       //todo but if westsync fires & homesensor therefore becomes true, stop the rotation
+       stepper.moveTo(150000000);              // todo need to rotate until homesenor becomes true - watch out thogh if it doesn't - eternal rotation.
+                                               // 
 
        domePowerOn(); 
        homing = true;                          // used in loop() to control motor movement
@@ -480,7 +486,8 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
       movementstate  = "Homing...";
 
       receivedData = "";
-    
+      homeSensor=false;   // the homesensor is set every time the dome moves past the trigger point so it may be set outside of find home, by virtue
+                          // of normal dome movement, so it must be set false here to be valid for find home to be the sole trigger.
 
     }
 
@@ -500,7 +507,7 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
 
   if (homing)
   {
-    if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
+    if ((millis() - azimuthTimerInterval) > 500.0) // one half second checks for HOMESENSOR STATE as the dome moves
     {
       getCurrentAzimuth();                      
       azimuthTimerInterval = millis();
@@ -515,7 +522,10 @@ if (receivedData.indexOf("DI", 0) > -1)     // THIS IS PURELY FOR DEBUG and retu
       TargetMessage = "Homing Complete";
       homing        = false;
       homeSensor    = false;      // homing is finished, so set the sensor to false. 
-
+      //todo  1 - the azimuth is now the home value (whatever that is) so set it here
+      // todo 2 - we need a facility to write the home position to EEPROM - perhaps do this from the monitor program, so that it removes the hardcoding
+      // e.g. 261 used for 'west'
+      //todo  3 - probably need to set targetazimuth = getcurrent azimuth here so once home is found, the code won't start a move because of a difference between target and current
       domePowerOff();
      }
 
