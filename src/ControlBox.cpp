@@ -50,7 +50,7 @@ AVR4809 pinout for the control box - see the mailbox sheet
 //
 //  The routine drives the stepper motor to move the Dome
 //  It acquires the current azimuth via hardware serial from the encoder
-//TODO SET THE STEPPER CURRENT POS TO ZERO BEFORE SETTING THE TARGET FOR QUERYDIR
+
 
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
@@ -75,7 +75,7 @@ bool checkForValidAzimuth();
 uint16_t encoder();
 bool PowerForCamera(bool State);
 void interrupt();
-void WestSync();
+void domeSync();
 void ledToggle();
 void syncToAzimuth(int syncAzimuth);
 
@@ -109,7 +109,7 @@ uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data val
 uint16_t EEMEM NonVolatileToggle;
 uint16_t EEMEM NonVolatileParkAzimuth;
 uint16_t EEMEM NonVolatileHomeAzimuth;
-// SRAM Vars paired to the above - todo add in another var for homeposition
+// SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
 uint16_t SRAMToggle;
 uint16_t SRAMHomeAzimuth;
@@ -189,7 +189,7 @@ void setup()
 
   // interupts for the azimuth syncs below
   
-  attachInterrupt(digitalPinToInterrupt(WestPin), WestSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
+  attachInterrupt(digitalPinToInterrupt(WestPin), domeSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
 
 // Read the EEPROM to check whether this is a power cycled startup (toggle != 1) or a software reset (via the monitor program, Toggle = 1)
 
@@ -206,9 +206,9 @@ if (SRAMToggle == 1 )
   }
   else
   {
-    // todo - scrap the hard coded 255 - a nightmare 
+    
     // initial power cycled starts execute the line below
-    A_Counter = ticksperDomeRev / (360.0 / 255.0); //  the position where the scope and dome see eye to eye when the scope az is 270
+    A_Counter = ticksperDomeRev / (360.0 / SRAMParkAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
   }
 
   PowerForCamera(off); // camera power is off by default
@@ -245,7 +245,7 @@ if (SRAMToggle == 1 )
 
 
 
-  TargetAzimuth = getCurrentAzimuth(); // todo - check that a valid azimuth is returned
+  TargetAzimuth = getCurrentAzimuth(); // shuld really check that a valid azimuth is returned
 
   initialiseCDArray();
 
@@ -382,13 +382,9 @@ else if (monitorReceipt.indexOf("GH", 0) > -1)   //
   }
 
 
-
-
-
-
-
-
   } // endif Monitor.available
+
+
 
     //*************************************************************************
     //************     code for ASCOM functions below    **********************
@@ -480,7 +476,7 @@ else if (monitorReceipt.indexOf("GH", 0) > -1)   //
           stepper.setAcceleration(normalAcceleration); // set the acceleration
           stepper.setCurrentPosition(0);               // initialise the stepper position
           QueryDir = WhichDirection();                 // work out which direction of travel is optimum
-          // todo remove 2 lines blow
+          // testing - remove 2 lines blow
           // ASCOM.print("So the direction is  ");
           // ASCOM.println(QueryDir);
 
@@ -604,6 +600,7 @@ if (homing)
     TargetMessage = "Homing Complete";
     homing        = false;
     homeSensor    = false;      //homing is finished, so set the sensor to false. It may be set true again by calls to getcurrentazimuth()
+    
     // todo set the azimuth  to the home position - set this in EEPROM from the monitor programme & read it here
     // todo 2 - set targetazimuth = currentazimuth so that the code sees no difference, which would cause a slew to azimuth
     domePowerOff();
@@ -714,7 +711,7 @@ void check_If_SlewingTargetAchieved()
 
     if (abs(stepper.distanceToGo()) < 20)
     {
-      //TODO REMOVE 3 TEST LINE BELOW
+      //Testing REMOVE 3 TEST LINE BELOW
      // int x = abs(stepper.distanceToGo() );
      // Monitor.println(x);
       Slewing = false;              // used to stop the motor in main loop
@@ -726,9 +723,7 @@ void check_If_SlewingTargetAchieved()
       TargetMessage = "Target achieved ";
       QueryDir = "None";
 
-     //todo - this is probably not needed here - just the var updates which will be used in the monitortimerinterval() routine once per second to create the packet 
-     //createDataPacket();
-
+    
       domePowerOff(); // power off the stepper now that the target is reached.
     }
     else
@@ -752,7 +747,7 @@ void createDataPacket()
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
-  //todo remove the line below which was just for testing 
+  // for testing 
   //Monitor.println(dataPacket);
 }
 
@@ -870,12 +865,12 @@ void interrupt() // Interrupt function
 } // end void interrupt
 
 
-void WestSync()  // todo consider calling this routine homesync
+void domeSync()  // todo consider calling this routine homesync or domesync
 {
-  // this routine is called when the westsync interrupt fires
-  // todo important - scrap the hardcoded 270 - a nightmare. set this value in EEPROM & read it
-  // the value can be sent from the monitor program and stored in EEPROM
-  A_Counter = ticksperDomeRev / (360.0 / 270.0); // the position of due west 
+  // this routine is called when the domesync interrupt fires
+  
+  // the SRAMParkAzimuth value is sent from the monitor program and stored in EEPROM
+  A_Counter = ticksperDomeRev / (360.0 / SRAMParkAzimuth); // the position where the scope and dome park
                                                  
   
   homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
@@ -899,6 +894,6 @@ void syncToAzimuth(int syncAzimuth)
   // this routine is called when the ASCOM driver sends STA999 - sync to azimuth
   (float)syncAzimuth;
   A_Counter = ticksperDomeRev / (360.0 / syncAzimuth); // change the value of the global var A_Counter which is used to calculate Azimuth
- // test print todo remove or comment out
+ // test print remove or comment out
  // ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
 }
