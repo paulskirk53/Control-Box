@@ -601,8 +601,9 @@ if (homing)
     homing        = false;
     homeSensor    = false;      //homing is finished, so set the sensor to false. It may be set true again by calls to getcurrentazimuth()
     
-    // todo set the azimuth  to the home position - set this in EEPROM from the monitor programme & read it here
-    // todo 2 - set targetazimuth = currentazimuth so that the code sees no difference, which would cause a slew to azimuth
+    // note the dome azimuth is set to the home position by the ISR routine domeSync() when it fires, so nothing to do here
+
+    TargetAzimuth = SRAMHomeAzimuth;  //set targetazimuth = SRAMHomeAzimuth or getcurrentazimuth() so that the code sees no difference, which would cause a slew
     domePowerOff();
   }
 
@@ -875,7 +876,7 @@ void domeSync()  // todo consider calling this routine homesync or domesync
   
   homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
                                       // the dome is at the home position when the homing process runs
-  syncCount ++;
+  syncCount ++;   // not much use as the ISR is likely to be fired many times by the microswitch. Better to be bool - how to send to monitor in the data packet
 }
 void ledToggle()
 {
