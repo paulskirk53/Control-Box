@@ -104,12 +104,16 @@ void syncToAzimuth(int syncAzimuth);
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
-// EEPROM vars for storing the Azimuth and Toggle todo add in another var for homeposition
+// EEPROM vars for storing the Azimuth and Toggle 
 uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
 uint16_t EEMEM NonVolatileToggle;
+uint16_t EEMEM NonVolatileParkAzimuth;
+uint16_t EEMEM NonVolatileHomeAzimuth;
 // SRAM Vars paired to the above - todo add in another var for homeposition
 uint16_t SRAMAzimuth;
 uint16_t SRAMToggle;
+uint16_t SRAMHomeAzimuth;
+uint16_t SRAMParkAzimuth;
 
 
 String receivedData;
@@ -189,8 +193,10 @@ void setup()
 
 // Read the EEPROM to check whether this is a power cycled startup (toggle != 1) or a software reset (via the monitor program, Toggle = 1)
 
-SRAMAzimuth = eeprom_read_word(&NonVolatileAzimuth);
-SRAMToggle  = eeprom_read_word(&NonVolatileToggle);
+SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
+SRAMToggle      = eeprom_read_word(&NonVolatileToggle);
+SRAMParkAzimuth = eeprom_read_word(&NonVolatileParkAzimuth );
+SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
 
 
 if (SRAMToggle == 1 )
@@ -318,8 +324,69 @@ void loop()
     {                                                     // at the time of reset i.e. this would be an end of observing session power down
       eeprom_update_word(&NonVolatileToggle, 0);
     }
-    // todo add in a monitor receipt of HP (home position) this will receive HP999# from the Monitor datastream and store the value received in EEPROM
-    // check that 0 <= value received <=360 store as integer
+    // December 2025, adding in a monitor receipt of SH,SP, GH, GP (set home, set park, get home, get park)
+    
+    //*************************************************************************
+    //************** code for Set Home (SH) and Set Park (SP) below ***********
+    //**** the code writes the park and home azimuth values to eeprom   *******
+    //*************************************************************************
+    //*************************************************************************
+
+    else if (monitorReceipt.indexOf("SH", 0) > -1)   // 
+    {      
+      monitorReceipt.remove(0,2);
+      SRAMHomeAzimuth= monitorReceipt.toInt();
+      if ( (SRAMHomeAzimuth >= 0) && (SRAMHomeAzimuth <=360) )
+      {
+        eeprom_update_word(&NonVolatileHomeAzimuth, SRAMHomeAzimuth);  
+      }
+      else
+      {
+        eeprom_update_word(&NonVolatileHomeAzimuth, 0);   //if a valid azimuth wasn't received, set the home position to 0
+      }
+      
+    }
+else if (monitorReceipt.indexOf("SP", 0) > -1)   // 
+    {      
+      monitorReceipt.remove(0,2);
+      SRAMParkAzimuth= monitorReceipt.toInt();
+      if ( (SRAMParkAzimuth >= 0) && (SRAMParkAzimuth <=360) )
+      {
+        eeprom_update_word(&NonVolatileParkAzimuth, SRAMParkAzimuth);  
+      }
+      else
+      {
+        eeprom_update_word(&NonVolatileParkAzimuth, 0);   //if a valid azimuth wasn't received, set the park position to 0
+      }
+      
+    }
+
+    //***************************************************************************
+    //************** code for Get Home (GH) and Get Park (GP) below *************
+    //**** values are read from EEPROM and written to the monitor program   *****
+    //***************************************************************************
+    //***************************************************************************
+
+  else if (monitorReceipt.indexOf("GP", 0) > -1)   // 
+  {
+      uint16_t pa =  eeprom_read_word(&NonVolatileParkAzimuth );
+      
+      Monitor.print(String(pa)+"#");
+  }
+
+else if (monitorReceipt.indexOf("GH", 0) > -1)   // 
+  {
+      uint16_t ha =  eeprom_read_word(&NonVolatileHomeAzimuth );
+      
+      Monitor.print(String(ha)+"#");
+  }
+
+
+
+
+
+
+
 
   } // endif Monitor.available
 
