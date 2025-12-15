@@ -104,14 +104,12 @@ void syncToAzimuth(int syncAzimuth);
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
-// EEPROM vars for storing the Azimuth and Toggle 
+// EEPROM vars for storing the Azimuths
 uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
-uint16_t EEMEM NonVolatileToggle;
 uint16_t EEMEM NonVolatileParkAzimuth;
 uint16_t EEMEM NonVolatileHomeAzimuth;
 // SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
-uint16_t SRAMToggle;
 uint16_t SRAMHomeAzimuth;
 uint16_t SRAMParkAzimuth;
 
@@ -191,25 +189,17 @@ void setup()
   
   attachInterrupt(digitalPinToInterrupt(WestPin), domeSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
 
-// Read the EEPROM to check whether this is a power cycled startup (toggle != 1) or a software reset (via the monitor program, Toggle = 1)
+
 
 SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
-SRAMToggle      = eeprom_read_word(&NonVolatileToggle);
 SRAMParkAzimuth = eeprom_read_word(&NonVolatileParkAzimuth );
 SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
 
 
-if (SRAMToggle == 1 )
-  {
-    // software resets execute the line below, which preserves the dome azimuth at point of reset.
-    A_Counter = ticksperDomeRev / (360.0 / float(SRAMAzimuth) );  // set the azimuth to the value stored in EEPROM
-  }
-  else
-  {
-    
-    // initial power cycled starts execute the line below
+
+    // set the dome azimuth to the park position of the dome - this is where scope and dome align for the initialisation
     A_Counter = ticksperDomeRev / (360.0 / SRAMParkAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
-  }
+  
 
   PowerForCamera(off); // camera power is off by default
 
@@ -280,10 +270,14 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request 
+    else if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request at time of connection
     {
       Monitor.print("monitorcontrol#");
+      // this is a connect request, so set the dome azimuth value (because users are allowed to change it as part of disconnect functionality)
+      SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);   
+       A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
     }
+    
     
     //*************************************************************************
     //********      code for MCU reset process below          *****************
@@ -293,9 +287,9 @@ void loop()
     else if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
       Monitor.print("resetting");
-      // preserve  the dome azimuth and set the reset Toggle in EPROM
-      eeprom_update_word(&NonVolatileAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM
-      eeprom_update_word(&NonVolatileToggle, 1 );  // write a 1 to te toggle in EEPROM to signify a software reset has taken place
+      // preserve  the dome azimuth 
+      eeprom_update_word(&NonVolatileAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM i.e state is preserved on user requested reset
+      
 
       delay(1000);   //
       resetViaSWR();
@@ -319,11 +313,19 @@ void loop()
        //Monitor.print("rec'd camOFF");
     }
 
-   // 
-     else if (monitorReceipt.indexOf("eepromtoggle", 0) > -1)   // the toggle will be set to zero which is used to indicate a power down reset - no preservation of the dome azimuth
-    {                                                     // at the time of reset i.e. this would be an end of observing session power down
-      eeprom_update_word(&NonVolatileToggle, 0);
+    
+    else if (monitorReceipt.equals("kkepaz"))  //.indexOf("keepaz", 0) > -1)   
+    {      
+      int16_t az = getCurrentAzimuth();                                                     
+      eeprom_update_word(&NonVolatileAzimuth, az);
     }
+  
+    else if (monitorReceipt.equals("nokeepaz"))   
+    {      
+                                                       
+      eeprom_update_word(&NonVolatileAzimuth, SRAMParkAzimuth); //store the current park azimuth in the eeprom
+    }
+
     // December 2025, adding in a monitor receipt of SH,SP, GH, GP (set home, set park, get home, get park)
     
     //*************************************************************************
@@ -346,7 +348,7 @@ void loop()
       }
       
     }
-else if (monitorReceipt.indexOf("SP", 0) > -1)   // 
+    else if (monitorReceipt.indexOf("SP", 0) > -1)   // 
     {      
       monitorReceipt.remove(0,2);
       SRAMParkAzimuth= monitorReceipt.toInt();
@@ -367,19 +369,19 @@ else if (monitorReceipt.indexOf("SP", 0) > -1)   //
     //***************************************************************************
     //***************************************************************************
 
-  else if (monitorReceipt.indexOf("GP", 0) > -1)   // 
-  {
+    else if (monitorReceipt.indexOf("GP", 0) > -1)   // 
+    {
       uint16_t pa =  eeprom_read_word(&NonVolatileParkAzimuth );
       
       Monitor.print(String(pa)+"#");
-  }
+    }
 
-else if (monitorReceipt.indexOf("GH", 0) > -1)   // 
-  {
+    else if (monitorReceipt.indexOf("GH", 0) > -1)   // 
+    {
       uint16_t ha =  eeprom_read_word(&NonVolatileHomeAzimuth );
       
       Monitor.print(String(ha)+"#");
-  }
+    }
 
 
   } // endif Monitor.available
@@ -422,6 +424,9 @@ else if (monitorReceipt.indexOf("GH", 0) > -1)   //
     else if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)
     {
       ASCOM.print("controlbox#");
+      // this is a connection request so set the azimuth by reading from eeprom
+       SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
+       A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
     }
 
    //  else if (receivedData.indexOf("controlbox", 0) > -1  )
