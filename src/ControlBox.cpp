@@ -276,6 +276,7 @@ void loop()
       // this is a connect request, so set the dome azimuth value (because users are allowed to change it as part of disconnect functionality)
       SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);   
        A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
+       TargetAzimuth = getCurrentAzimuth( );  //set target azimuth the same as current azimuth so no slew occurs on connection
     }
     
     
@@ -314,10 +315,11 @@ void loop()
     }
 
     
-    else if (monitorReceipt.equals("kkepaz"))  //.indexOf("keepaz", 0) > -1)   
+    else if (monitorReceipt.equals("keepaz"))  //.indexOf("keepaz", 0) > -1)   
     {      
       int16_t az = getCurrentAzimuth();                                                     
       eeprom_update_word(&NonVolatileAzimuth, az);
+      
     }
   
     else if (monitorReceipt.equals("nokeepaz"))   
@@ -427,6 +429,7 @@ void loop()
       // this is a connection request so set the azimuth by reading from eeprom
        SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
        A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
+       TargetAzimuth = getCurrentAzimuth( );  //set target azimuth the same as current azimuth so no slew occurs on connection
     }
 
    //  else if (receivedData.indexOf("controlbox", 0) > -1  )
