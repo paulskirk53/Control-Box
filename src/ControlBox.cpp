@@ -1,27 +1,37 @@
 /*
 
+December 2025 some important TODOS added along with some notes - important changes are required :
+e.g. 1 - to find home
+     2 - to save the home position in EEPROM from a request sent by the monitor program
 
-NOte re encoder calibration:
-see this spreadsheet for calcuations of ticks per dome revolution - google sheets 'encoder ticks per dome rev'
+comment on review of this code 4-3-2025
+It looks like this code is ready to test - need to do the calculation of steps per degree of dome movement as per todo below, then try it out.
+Make a completely separate control box so that in the event it fails the working control box can be reinstated. They should be pin compatible.
+
+Problem todo - the code sends the motor to the target position, but no check is made of the Azimuth value. Perhaps a check of azimuth, then move would be best.
+this could be iterated.
 
 Next steps: 
-1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
+1 - (done) put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
-    The monitor program informs the data which is needed in the packet
-    the target az -     targetazimuth
-    movement direction  querydir   
-    movement status     movementstate
-    target status?      targetmessage
-    Degrees to target   String(CDArray[CurrentAzimuth])
-    Dome Azimuth        getcurrentazimuth()  ??
-    Camera power state  cameraPowerState
+    the list below checked against the current master branch code December 2025 and accurately reflects the data message required by
+    the monitor program as of 13-12-25
+
+    The current Azimuth       - CurrentAzimuth
+    The target Az.            - TargetAzimuth
+    Moving to target?         - movementstate 
+    which direction to rotate - QueryDir 
+    Target status             - TargetMessage 
+    degrees to target         - CDArray[CurrentAzimuth] 
+    camera power              - cameraPowerState 
+    a heartbeat counter       - syncCount
 
 2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR - done
 
-Note Note Note Note Note Note
+Note ========== 8-9-23 ======= Note Note Note Note Note
 
 This project is the Code for the new (1-5-23) control box (stepper and encoder functions) on one AVR4809 chip
-
+and this branch looks to use degrees as the moveto method rather than steps 
 
 Note Note Note Note Note Note
 */
@@ -62,7 +72,7 @@ AVR4809 pinout for the control box - see the mailbox sheet
 
 void Emergency_Stop(int azimuth, String mess);
 String WhichDirection();
-void WithinFiveDegrees();
+
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
 void createDataPacket();
@@ -89,7 +99,7 @@ void syncToAzimuth(int syncAzimuth);
 #define stepPin 11     // connection for motor step signal
 
 
-#define WestPin 29        // sync connection for dome
+#define WestPin 29     // sync connection for dome
 //
 #define off false
 #define on true
@@ -115,40 +125,52 @@ uint16_t SRAMParkAzimuth;
 
 
 String receivedData;
-boolean DoTheDeceleration;
-boolean Slewing;                 // controls whether the stepper is stepped in the main loop
-boolean homing = false;
-boolean homeSensor = false;
-float StepsPerSecond;            // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
 
-boolean TargetChanged = false;
-boolean monitorSendFlag = false; // this only becomes true after the MCU is connected successfully and when true, the data stream to the monitor program is enabled
+boolean Slewing; // controls whether the stepper is stepped in the main loop
+boolean homing = false;
+boolean homeSensor = false;      // this is set true if Westsync interrupt fires - the home sensor
+float StepsPerSecond; // used in stepper.setMaxSpeed - 50 the controller (MAH860) IS SET TO step size 0.25
+                      //NB as of summer '23 the controller is the TB6600
+
+
+
 float normalAcceleration;        // was incorrectly set to data type int
 
-int stepsToTarget = 0;
-int DecelValue = 400;            // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
-int EncoderReplyCounter = 0;
-int savedAzimuth = 0;
+int stepsToTarget = 0;           // for monitor program
+
+
+int savedAzimuth = 0;             //int is 16 bit 
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
-
+long stepsPerDegree       =10;   //todo find the real value and update this statement
+// e.g. process for defining the above:
+/*
+use arduino sermon for control and comms
+start at say 270 degrees
+set stepsPerDegree = some value x (try 400) and then upload the code.
+SA90# from a known position say 270 and end up at position y - this will give a value of steps used to move the dome z = y-270 degrees
+calculate stepsPerDegree as x/ z  and ASCOM.print it
+Now set this value in the code (line 123 in this file) and try a slew from 270 to 90 (180 degrees) to see how accurate the figure is. It might need adjusting?
+*/
 String TargetMessage = "No Target";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
-String pkversion = "6.0";
+String pkversion = "7.0";
 String dataPacket = "";
 
-volatile long A_Counter;    // volatile because it's used in the interrupt routine
-volatile int syncCount = 0; // counts the number of syncs and acts as an indicator on the monitor program
-float Azimuth;              // The data type is important to avoid integer arithmetic in the encoder() routine
-uint16_t integerAzimuth;    // this is what is returned from the encoder routine
-                            // and also because we really don't need fractional degrees for dome movement.
-                                                        
-float ticksperDomeRev = 20700;  // 12-9-25 : The encoder is now attached to the base of the stepper motor shaft. The shaft rotates 34.5 turns for one dome rotation
+
+
+volatile long A_Counter;        // volatile because it's used in the interrupt routine
+volatile int syncCount = 0;     // counts the number of syncs and acts as an indicator on the monitor program
+float Azimuth;                  // The data type is important to avoid integer arithmetic in the encoder() routine
+uint16_t integerAzimuth;        // this is what is returned from the encoder routine
+                                // and also because we really don't need fractional degrees for dome movement.
+float ticksperDomeRev = 20700;  // 12-9-25 (added here 13-12-25): The encoder is now attached to the base of the stepper motor shaft. 
+                                // The shaft rotates 34.5 turns for one dome rotation
                                 // so the ticks per dome rev are 34.5 x 600 = 20,700
-                                //
-float ticksPerDegree  = ticksperDomeRev /360.0;   // do the calculation here just once
+
+float ticksPerDegree  = ticksperDomeRev / 360.0;  // do the calculation once here
 bool cameraPowerState = off;
 
 
@@ -159,6 +181,8 @@ bool cameraPowerState = off;
 
 void setup()
 {
+  //todo Dec' 2025 add in the code which writes to eeprom from the master branch
+
 //Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
   digitalWriteFast(power_pin, LOW); // initialise the pin state so that the mosfet gate is Low and therefore power to the MA860H is off
@@ -166,26 +190,24 @@ void setup()
   pinMode(ledpin, OUTPUT);
 
 
-// Pin modes for the encoder
-
-
+// Pin modes for the west sync and camera power
   pinMode(WestPin, INPUT_PULLUP);
-
   pinMode(CameraPower, OUTPUT);
 
   //turn the camera power of at startup:
   digitalWriteFast (CameraPower, LOW);           //  LOW is camera power OFF
 
- // encoder:
+ // Pin modes for the encoder:
   pinMode(A_PHASE, INPUT_PULLUP);
   pinMode(B_PHASE, INPUT_PULLUP);
 
 
 
-  // pins 2,3,18,19,20,21 are the only pins available to use with interrupts on the mega2560 (no pin limit)restrictions on 4809)
+  // pins 2,3,18,19,20,21 are the only pins available to use with interrupts on the mega2560 
+  // no interrupt pin limit restrictions on 4809)
   attachInterrupt(digitalPinToInterrupt(A_PHASE), interrupt, RISING); // interrupt for the encoder device
 
-  // interupts for the azimuth syncs below
+  // interupts for the west azimuth sync below
   
   attachInterrupt(digitalPinToInterrupt(WestPin), domeSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
 
@@ -217,12 +239,12 @@ SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
   // initialise
 
   CurrentAzimuth       = 0;
-  DoTheDeceleration    = true; // used to set deceleration towards target azimuth
+ 
   monitorTimerInterval = millis();
   azimuthTimerInterval = millis();
   LedTimerInterval     = millis();
 
-  homeSensor = false;          // 
+  homeSensor = false;          // this uses the west sync hardware device
 
   ASCOM.begin(19200);   // start serial ports ASCOM driver - usb with PC - rx0 tx0 and updi
   
@@ -231,36 +253,38 @@ SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
   lightup(); // 10 SECOND DELAY flash Led to indicate reset when the box lid is off for testing
              // ALLOWS setup time for serial comms
 
-  // ASCOM.println(" before get azimuth");
+  // ASCOM.println(" before get azimuth");       // debug only
 
 
 
-  TargetAzimuth = getCurrentAzimuth(); // shuld really check that a valid azimuth is returned
+  TargetAzimuth = getCurrentAzimuth(); // set the target az equal to the current az, so that no mevement takes place
+                                       // at power up
 
-  initialiseCDArray();
+  initialiseCDArray();    // used by the monitor program to provide a countdown to target during slew operations
 
   
 } // end setup
 
 /*
-  \\\\\\\\\\\\\\\\/////////////////////////\\\\\\\\\\\\\\\\\\\\\///////////////
-  ////////////////\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////\\\\\\\\\\\\\\\
-  ////////////////\\\\\\\\\\\\\\\\\\\\\\\\\/////////////////////\\\\\\\\\\\\\\\
-  \\\\\\\\\\\\\\\\/////////////////////////\\\\\\\\\\\\\\\\\\\\\///////////////
+  \\\\\\\\\\\\\\\\ ///////////////////////// End Setup() \\\\\\\\\ /////////////// \\\\\\\\\\\\\\\\\\\\\\\\\ /////////////////////
+  //////////////// \\\\\\\\\\\\\\\\\\\\\\\\\             ///////// \\\\\\\\\\\\\\\ ///////////////////////// \\\\\\\\\\\\\\\\\\\\\
 */
 
 void loop()
 {
 
-  // put your main code here, to run repeatedly, perhaps for eternity if the power holds up....
+  // put your main code here, to run repeatedly, perhaps for eternity if the power holds up....How long is eternity?
+  // also there are other considerations such as corrosion of connectors and joints over a period such as eternity...
 
-  if (Monitor.available() > 0)
+  if (Monitor.available() > 0)    // monitor is the serial data stream used for comms to the monitor program
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet 
     {
-      Monitor.print(dataPacket);
+      
+      Monitor.print(dataPacket);   // send the requested datapacket to the monitor program
+     
     }
     
 
@@ -398,7 +422,7 @@ void loop()
 
 
 
-  if (ASCOM.available() > 0) // when serial data arrives from the driver on USB capture it into a string
+  if (ASCOM.available() > 0) // when serial data arrives from the ASCOM driver capture it into a string
   {
 
     receivedData = ASCOM.readStringUntil('#'); // read a string from PC serial port usb
@@ -411,9 +435,9 @@ void loop()
     if (receivedData.indexOf("AZ", 0) > -1)
     {
 
-      String x = (String) getCurrentAzimuth();
-      x += "#";
-      ASCOM.print(x);
+      String x = (String) getCurrentAzimuth();   // set x to the current dome azimuth
+      x += "#";                                  // add a # to comply with our comms protocol
+      ASCOM.print(x);                            // send the azimuth to the ASCOM dome driver
     }
 
 
@@ -438,7 +462,7 @@ void loop()
    //  }
 
     //*************************************************************************
-    //******** code for emergency stop process below **************************
+    //********       code for emergency stop process below      ***************
     //********            data sent by ASCOM driver ES#         ***************
     //*************************************************************************
     //*************************************************************************
@@ -460,20 +484,20 @@ void loop()
     {
 
       domePowerOn(); // turn on the power supply for the stepper motor
-      // strip off 1st 2 chars
+      // strip off 1st 2 chars - SA
       receivedData.remove(0, 2);
 
       TargetAzimuth = receivedData.toInt(); // store the target azimuth for comparison with current position
-      // the way the code works is to treat a rrquest for az = 360 as az =0 , hence the if clause below
+      // the way the code works is to treat a request for az = 360 as az =0 , hence the if clause below
       if (TargetAzimuth == 360)
       {
         TargetAzimuth = 0;
       }
-      bool AzOK = checkForValidAzimuth();
+      bool AzOK = checkForValidAzimuth();   // is the az between 0 and 360
       if (AzOK)
       {
-        TargetChanged = true;
-
+        long targetPosition = TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move
+                                                               // in order to reach the target
         //  Serial.println();
         //  Serial.print("in slewto target received ");
         //  Serial.println(TargetAzimuth);
@@ -491,24 +515,26 @@ void loop()
           if (QueryDir == "clockwise")
           {
             stepper.setCurrentPosition(0);
-            stepper.moveTo(150000000); // positive number means clockwise in accelstepper library. This number must be sufficiently large
-                                       // to provide enough steps to reach the target.
+            stepper.moveTo(targetPosition); // positive number means clockwise in accelstepper library. 
+                                  
           }
 
           if (QueryDir == "anticlockwise")
           {
             stepper.setCurrentPosition(0);
-            stepper.moveTo(-150000000); // negative is anticlockwise in accelstepper library
+            stepper.moveTo(-targetPosition); // negative is anticlockwise in accelstepper library
           }
 
-          DoTheDeceleration = true;
-
-          // MOVED THE FOLLOWING FROM HERE TO NEXT LEVEL receivedData = "";
         }
         receivedData = "";
 
       } // end if azok
-    } // end if SA
+
+      // set messages for the data packet to be sent to the monitor program      
+      movementstate = "Moving"; // for updating the datapacket
+      TargetMessage = "Awaiting Target ";
+
+    } // end if Slew to Azimuth
 
     //**********************************************************
     //******** code for SL process below ***********************
@@ -521,7 +547,7 @@ void loop()
 
       if (Slewing | homing)
       {
-        ASCOM.print("Moving#");
+        ASCOM.print("Moving#");   // sent to ASCOM serial and picked up by the ASCOM driver
         // stepper.run();
       }
       else
@@ -545,8 +571,10 @@ void loop()
        stepper.setMaxSpeed(StepsPerSecond);    // steps per second see below -
        stepper.setCurrentPosition(0);          // wherever the motor is now is set to position 0
        stepper.setAcceleration(normalAcceleration/2.0); // half normal for homing
-
-       stepper.moveTo(150000000);              // this number has to be large enough for the drive to be able to complete a full circle.
+       //todo we know the number of motor shaft steps per degree of dome movement, so calculate the number of steps for a 360 degree rotation from that
+       //todo but if westsync fires & homesensor therefore becomes true, stop the rotation
+       stepper.moveTo(150000000);              // todo need to rotate until homesenor becomes true - watch out thogh if it doesn't - eternal rotation.
+                                               // 
 
        domePowerOn(); 
        homing = true;                          // used in loop() to control motor movement
@@ -557,6 +585,8 @@ void loop()
       movementstate  = "Homing...";
 
       receivedData = "";
+      homeSensor=false;   // the homesensor is set every time the dome moves past the trigger point so it may be set outside of find home, by virtue
+                          // of normal dome movement, so it must be set false here to be valid for find home to be the sole trigger.
 
     }
 
@@ -583,23 +613,22 @@ void loop()
   // start grouping for Slewing functions here
   if (Slewing) // if the slew status is true, run the stepper and update the data in the monitor program
   {
-    WithinFiveDegrees();
-
+    
     stepper.run();
 
-    check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor
+    check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor program
 
   }  // endif Slewing
 
-if (homing)
-{
-  if ((millis() - azimuthTimerInterval) > 200.0) // one FIFTH second checks for HOMESENSOR STATE as the dome moves
+  if (homing)
   {
-    getCurrentAzimuth();                      
-    azimuthTimerInterval = millis();
-    //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
-    //ASCOM.println(homeSensor);
-  }
+    if ((millis() - azimuthTimerInterval) > 500.0) // one half second checks for HOMESENSOR STATE as the dome moves
+    {
+      getCurrentAzimuth();                      
+      azimuthTimerInterval = millis();
+      //ASCOM.print("VALUE OF HOMESENSOR IS true if activated ");
+      //ASCOM.println(homeSensor);
+    }
 
   if (homeSensor==true)                     // true indicates the sensor at the home position has been activated
   {
@@ -616,9 +645,9 @@ if (homing)
   }
 
 
-}
+  }  // endif homing
 
- // create / update the data packet for monitoring program
+    // create / update the data packet for monitoring program
     //
     if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves and tick the heartbeat LED
     {
@@ -637,9 +666,6 @@ if (homing)
 
 
   stepper.run();   // stepper run - works for slewing and for findHome
-
-
-//end
 
 
 
@@ -661,7 +687,7 @@ String WhichDirection()
   // optimises battery use by the motor.
 
   CurrentAzimuth = getCurrentAzimuth(); // this comes from the encoder
-  // azimuth = CurrentAzimuth;          //save this to work out the distance to go
+  
   int clockwiseSteps = calculateClockwiseSteps();
   int antiClockwiseSteps = 360 - clockwiseSteps;
 
@@ -679,34 +705,7 @@ String WhichDirection()
   }
 }
 
-void WithinFiveDegrees()
-{
 
-  if (DoTheDeceleration)
-  {
-
-    CurrentAzimuth = getCurrentAzimuth();
-
-    if ((abs(CurrentAzimuth - TargetAzimuth) < 5) && (TargetChanged == true)) // within 5 degrees of target
-    {
-
-      DoTheDeceleration = false;
-      if (QueryDir == "clockwise")
-      {
-        // set the moveto position to allow 100 steps more for deceleration  +ve for clockwise -ve for anticclock
-
-        stepper.moveTo(stepper.currentPosition() + DecelValue); // FROM MA860H Datasheet @0.225 step angle, it requires 1600 steps per rotation
-        // of the stepper drive wheel, so 1000 is 0.6 of a rotation
-      }
-
-      if (QueryDir == "anticlockwise")
-      {
-        //  stepper.setCurrentPosition(0);
-        stepper.moveTo(stepper.currentPosition() - DecelValue); // check this by printing out current position is it negative?
-      }
-    }
-  }
-}
 
 int getCurrentAzimuth()
 {
@@ -718,27 +717,21 @@ int getCurrentAzimuth()
 void check_If_SlewingTargetAchieved()
 {
 
-    if (abs(stepper.distanceToGo()) < 20)
+    if (stepper.distanceToGo() == 0 )  // todo probably need to check azimuth here e.g. add to conition && azimuth within a range of say three degrees of target
+    // if the slew is out by x degrees, nudge in appropriate direction by the number of steps corresponding to x degrees.
+    // however, if the numbers of steps per degree is accurate and the drive does not stall thereby missing steps, the target azimuth should be good. :)
     {
-      //Testing REMOVE 3 TEST LINE BELOW
-     // int x = abs(stepper.distanceToGo() );
-     // Monitor.println(x);
-      Slewing = false;              // used to stop the motor in main loop
-      movementstate = "Stopped.  "; // for updating the lcdpanel
-
-      // Serial.print("ABS STEPPER distance to go....");
-      // Serial.println();
-      // update the LCD
+      
+      Slewing       = false;          // used to stop the motor in main loop
+      movementstate = "Stopped.  ";   // Set the variables for the data packet
       TargetMessage = "Target achieved ";
-      QueryDir = "None";
+      QueryDir      = "None";
 
-    
       domePowerOff(); // power off the stepper now that the target is reached.
     }
     else
     {
-      movementstate = "Moving"; // for updating the lcdpanel
-      TargetMessage = "Awaiting Target ";
+      
       stepper.run();
     }
 
@@ -794,14 +787,15 @@ void lightup()
 }
 bool checkForValidAzimuth()
 {
-  if ( (TargetAzimuth >= 0) && (TargetAzimuth <=359) )
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
+  if ( (TargetAzimuth >= 0) && (TargetAzimuth <=359) )  // todo suggest that 360 is a valid azimuth and may be requested by the ASCOM driver, so 359 needs change to 360
+  // not sure of any wider impact though so haven't changed at time of this comment 4-3-2025
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 
@@ -820,7 +814,7 @@ uint16_t encoder()
   }
 
   Azimuth = float(A_Counter) / (ticksPerDegree); // (ticks for one dome rev) / 360 (degrees) - about 29
-                                                          // i.e number of ticks per degree
+                                                 // i.e number of ticks per degree
 
   // some error checking
   if (Azimuth < 1.0)
