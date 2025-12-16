@@ -1,8 +1,8 @@
 /*
-
+Decmber '25 the code in this file is a merger of the Master and the drive using degrees branches
 December 2025 some important TODOS added along with some notes - important changes are required :
-e.g. 1 - to find home
-     2 - to save the home position in EEPROM from a request sent by the monitor program
+e.g. 1 - probably done - needs test to find home
+     2 - done to save the home position in EEPROM from a request sent by the monitor program - done
 
 comment on review of this code 4-3-2025
 It looks like this code is ready to test - need to do the calculation of steps per degree of dome movement as per todo below, then try it out.
@@ -11,8 +11,8 @@ Make a completely separate control box so that in the event it fails the working
 Problem todo - the code sends the motor to the target position, but no check is made of the Azimuth value. Perhaps a check of azimuth, then move would be best.
 this could be iterated.
 
-Next steps: 
-1 - (done) put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
+Info:: 
+1 - a data packet definition below for transmission to the monitor on receipt of a request. The packet is updated periodically in the monitortimerinterval() routine - done
     the packet is assembled using global vars which are uodated as any of the data items below are changed 
     the list below checked against the current master branch code December 2025 and accurately reflects the data message required by
     the monitor program as of 13-12-25
@@ -26,7 +26,7 @@ Next steps:
     camera power              - cameraPowerState 
     a heartbeat counter       - syncCount
 
-2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR - done
+
 
 Note ========== 8-9-23 ======= Note Note Note Note Note
 
@@ -876,7 +876,7 @@ void domeSync()  // todo consider calling this routine homesync or domesync
   A_Counter = ticksperDomeRev / (360.0 / SRAMParkAzimuth); // the position where the scope and dome park
                                                  
   
-  homeSensor=true;                    // set this when the hall sesnor is detected. It indicates
+  homeSensor=true;                    // set this when the home sesnor is detected. It indicates
                                       // the dome is at the home position when the homing process runs
   syncCount ++;   // not much use as the ISR is likely to be fired many times by the microswitch. Better to be bool - how to send to monitor in the data packet
 }
