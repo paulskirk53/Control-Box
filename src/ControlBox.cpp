@@ -1,8 +1,8 @@
 /*
 Decmber '25 the code in this file is a merger of the Master and the drive using degrees branches
-December 2025 some important TODOS added along with some notes - important changes are required :
+December 2025 some important TODOS added along with some notes - important changes need testing :
 e.g. 1 - probably done - needs test to find home
-     2 - done to save the home position in EEPROM from a request sent by the monitor program - done
+     2 - done - to save the home position in EEPROM from a request sent by the monitor program - done
 
 comment on review of this code 4-3-2025
 It looks like this code is ready to test - need to do the calculation of steps per degree of dome movement as per todo below, then try it out.
@@ -143,7 +143,7 @@ int savedAzimuth = 0;             //int is 16 bit
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
-long stepsPerDegree       =10;   //todo find the real value and update this statement
+
 // e.g. process for defining the above:
 /*
 use arduino sermon for control and comms
@@ -169,7 +169,7 @@ uint16_t integerAzimuth;        // this is what is returned from the encoder rou
 float ticksperDomeRev = 20700;  // 12-9-25 (added here 13-12-25): The encoder is now attached to the base of the stepper motor shaft. 
                                 // The shaft rotates 34.5 turns for one dome rotation
                                 // so the ticks per dome rev are 34.5 x 600 = 20,700
-
+float stepsPerDegree  = 153.33333; 
 float ticksPerDegree  = ticksperDomeRev / 360.0;  // do the calculation once here
 bool cameraPowerState = off;
 
