@@ -529,7 +529,7 @@ void loop()
             stepper.moveTo(-targetPosition); // negative is anticlockwise in accelstepper library
           }
 
-          DoTheDeceleration = true;
+          
         }
         receivedData = "";
 
