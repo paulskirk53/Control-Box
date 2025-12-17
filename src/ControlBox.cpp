@@ -496,8 +496,8 @@ void loop()
       bool AzOK = checkForValidAzimuth();   // is the az between 0 and 360
       if (AzOK)
       {
-        long targetPosition = TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move
-                                                               // in order to reach the target
+        float targetPosition = (float)TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move
+                                                                       // in order to reach the target
         //  Serial.println();
         //  Serial.print("in slewto target received ");
         //  Serial.println(TargetAzimuth);
