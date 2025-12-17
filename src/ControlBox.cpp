@@ -1,4 +1,8 @@
 /*
+ * The code has been tested with an arduino sermon sending SA999#, SL#. With the monitor program connected it slews correctly in both directions
+ * counts down to target and stops. The AI code in two routines replaces previous code in whichdirection() and the code which used CDArray as a countdown mechanism.
+ * Also countdown and linkedlist.cpp are no longer used and are now removed. 
+
 
 
 NOte re encoder calibration:
@@ -55,7 +59,7 @@ AVR4809 pinout for the control box - see the mailbox sheet
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
-#include "linkedList.h"
+//#include "linkedList.h"  // NO LONGER REQUIRED with new countdown code
 #include <avr/eeprom.h>
 
 // Forward declarations
@@ -114,6 +118,8 @@ uint16_t EEMEM NonVolatileHomeAzimuth;
 uint16_t SRAMAzimuth;
 uint16_t SRAMHomeAzimuth;
 uint16_t SRAMParkAzimuth;
+int16_t TargetAzimuth;
+int16_t CurrentAzimuth;
 
 
 String receivedData;
@@ -130,7 +136,7 @@ float normalAcceleration;        // was incorrectly set to data type int
 int stepsToTarget = 0;
 int DecelValue = 400;            // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
 int EncoderReplyCounter = 0;
-int savedAzimuth = 0;
+// int savedAzimuth = 0;         // no longer used
 long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same type as millis()
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
@@ -239,7 +245,7 @@ SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
 
   TargetAzimuth = getCurrentAzimuth(); // shuld really check that a valid azimuth is returned
 
-  initialiseCDArray();
+  // initialiseCDArray();
 
   
 } // end setup
@@ -504,13 +510,11 @@ void loop()
           }
 
           DoTheDeceleration = true;
-
-          // MOVED THE FOLLOWING FROM HERE TO NEXT LEVEL receivedData = "";
         }
         receivedData = "";
 
       } // end if azok
-    } // end if SA
+    } // end if Slew to Azimuth
 
     //**********************************************************
     //******** code for SL process below ***********************
@@ -674,6 +678,7 @@ String WhichDirection()
    }
   
 }
+
 // Compute shortest angular distance (signed: +CW, -CCW) - helper for whichdirection()
 int angularDistance(int from, int to) 
 {
@@ -858,6 +863,7 @@ bool PowerForCamera(bool State)
   }
 }
 
+
 void interrupt() // Interrupt function 
 {
 
@@ -890,6 +896,8 @@ void domeSync()  // todo consider calling this routine homesync or domesync
                                       // the dome is at the home position when the homing process runs
   syncCount ++;   // not much use as the ISR is likely to be fired many times by the microswitch. Better to be bool - how to send to monitor in the data packet
 }
+
+
 void ledToggle()
 {
   
@@ -902,6 +910,8 @@ void ledToggle()
       digitalWriteFast(ledpin, HIGH);
     }
 }
+
+
 void syncToAzimuth(int syncAzimuth)
 {
   // this routine is called when the ASCOM driver sends STA999 - sync to azimuth
@@ -910,7 +920,9 @@ void syncToAzimuth(int syncAzimuth)
  // test print remove or comment out
  // ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
 }
-// Countdown function: returns absolute remaining degrees to target
+
+
+// Countdown function: returns absolute remaining degrees to target for display in the monitor program
 int countdown(int currentAzimuth, int targetAzimuth) {
   return abs(angularDistance(currentAzimuth, targetAzimuth));
 }
