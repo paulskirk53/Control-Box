@@ -62,6 +62,8 @@ AVR4809 pinout for the control box - see the mailbox sheet
 
 void Emergency_Stop(int azimuth, String mess);
 String WhichDirection();
+int angularDistance(int from, int to) ;
+int countdown(int currentAzimuth, int targetAzimuth);
 void WithinFiveDegrees();
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
@@ -661,22 +663,23 @@ String WhichDirection()
   // optimises battery use by the motor.
 
   CurrentAzimuth = getCurrentAzimuth(); // this comes from the encoder
-  // azimuth = CurrentAzimuth;          //save this to work out the distance to go
-  int clockwiseSteps = calculateClockwiseSteps();
-  int antiClockwiseSteps = 360 - clockwiseSteps;
-
-  if (clockwiseSteps <= antiClockwiseSteps)
-  {
-    stepsToTarget = clockwiseSteps; // used to define the number of items in the countdown array
-    countDown("clockwise");         // populate the cdarray with the smaller number of steps
-    return "clockwise";
-  }
-  else
-  {
-    stepsToTarget = antiClockwiseSteps; // used to define the number of items in the countdown array
-    countDown("anticlockwise");         // populate the cdarray with the smaller number of steps
-    return "anticlockwise";
-  }
+  int direction = angularDistance(CurrentAzimuth,TargetAzimuth);
+  if (direction >=0)
+   {
+      return "clockwise";
+   } 
+   else
+   {
+     return "anticlockwise";
+   }
+  
+}
+// Compute shortest angular distance (signed: +CW, -CCW) - helper for whichdirection()
+int angularDistance(int from, int to) 
+{
+  int diff = (to - from + 360) % 360;
+  if (diff > 180) diff -= 360; // choose shortest direction
+  return diff;
 }
 
 void WithinFiveDegrees()
@@ -749,11 +752,12 @@ void createDataPacket()
 {
   
   CurrentAzimuth = getCurrentAzimuth(); 
-      
+  String remainingStr = String(countdown(CurrentAzimuth, TargetAzimuth));
+
   //eight items below
-  // dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
-  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
-  //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
+  
+  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + remainingStr + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
+  //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,        countdown to target       cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
   // for testing 
@@ -905,4 +909,8 @@ void syncToAzimuth(int syncAzimuth)
   A_Counter = ticksperDomeRev / (360.0 / syncAzimuth); // change the value of the global var A_Counter which is used to calculate Azimuth
  // test print remove or comment out
  // ASCOM.println(" Synced at Azimuth " + syncAzimuth)      ;                                                           
+}
+// Countdown function: returns absolute remaining degrees to target
+int countdown(int currentAzimuth, int targetAzimuth) {
+  return abs(angularDistance(currentAzimuth, targetAzimuth));
 }
