@@ -173,7 +173,8 @@ uint16_t integerAzimuth;        // this is what is returned from the encoder rou
 float ticksperDomeRev = 20700;  // 12-9-25 (added here 13-12-25): The encoder is now attached to the base of the stepper motor shaft. 
                                 // The shaft rotates 34.5 turns for one dome rotation
                                 // so the ticks per dome rev are 34.5 x 600 = 20,700
-float stepsPerDegree  = 153.33333; 
+float stepsPerDegree ;          // initialised in setup
+float DM860IStepsPerRotation =800;  // todo change this if the controller settings are changed
 float ticksPerDegree  = ticksperDomeRev / 360.0;  // do the calculation once here
 bool cameraPowerState = off;
 
@@ -185,7 +186,12 @@ bool cameraPowerState = off;
 
 void setup()
 {
-  //todo Dec' 2025 add in the code which writes to eeprom from the master branch
+  //one full revolution of the dome causes the motor shaft to rotate 34.5 times
+  // the DM860I controller is set to 800 steps per one motor shaft revolution
+  // so the number of steps the motor has to make for one degree of dome movement is 34.5 * 800.0 /360.0
+
+  stepsPerDegree =34.5 * DM860IStepsPerRotation / 360.0;
+
 
 //Pinmodes for the stepper code
   pinMode(power_pin, OUTPUT);
@@ -500,23 +506,27 @@ void loop()
       bool AzOK = checkForValidAzimuth();   // is the az between 0 and 360
       if (AzOK)
       {
-        float targetPosition = (float)TargetAzimuth * stepsPerDegree;  // this gives the number of steps the motor has to move
-                                                                       // in order to reach the target
+        //todo this is where we need to calculate the shortest distance and set the number of steps required to get there
+        // the formula below is incorrect call int angularDistance(int from, int to) 
+        int currentaz = getCurrentAzimuth();
+
+        int targetPosition = abs(angularDistance(currentaz, TargetAzimuth)) * stepsPerDegree;  // this gives the number of steps the motor has to move
+                                                                                               // in order to reach the target
         //  Serial.println();
         //  Serial.print("in slewto target received ");
-        //  Serial.println(TargetAzimuth);
-
+        //  Serial.println(int(targetPosition));
+        
         if (Slewing == false) // only do this if not slewing
         {
           Slewing = true;
           stepper.setAcceleration(normalAcceleration); // set the acceleration
           stepper.setCurrentPosition(0);               // initialise the stepper position
-          QueryDir = WhichDirection();                 // work out which direction of travel is optimum
+          QueryDir = WhichDirection();                 // work out which direction of travel is optimum todo remove this call and the routine see the comment just below for querydir
           // testing - remove 2 lines blow
           // ASCOM.print("So the direction is  ");
           // ASCOM.println(QueryDir);
 
-          if (QueryDir == "clockwise")
+          if (QueryDir == "clockwise")    //todo remove queryDir and replace with if(targetPosition>=0 )   as positive is CW and negative is CCW
           {
             stepper.setCurrentPosition(0);
             stepper.moveTo(targetPosition); // positive number means clockwise in accelstepper library. 
@@ -622,7 +632,7 @@ void loop()
     stepper.run();
 
     check_If_SlewingTargetAchieved();   //checks if slew is ended and updates monitor program
-
+   // ASCOM.println(stepper.distanceToGo());
   }  // endif Slewing
 
   if (homing)
@@ -724,7 +734,7 @@ int getCurrentAzimuth()
 void check_If_SlewingTargetAchieved()
 {
 
-    if (stepper.distanceToGo() == 0 )  // todo probably need to check azimuth here e.g. add to conition && azimuth within a range of say three degrees of target
+    if (stepper.distanceToGo()==0)  // todo probably need to check azimuth here e.g. add to conition && azimuth within a range of say three degrees of target
     // if the slew is out by x degrees, nudge in appropriate direction by the number of steps corresponding to x degrees.
     // however, if the numbers of steps per degree is accurate and the drive does not stall thereby missing steps, the target azimuth should be good. :)
     {
