@@ -74,7 +74,7 @@ void Emergency_Stop(int azimuth, String mess);
 String WhichDirection();
 int angularDistance(int from, int to) ;
 int countdown(int currentAzimuth, int targetAzimuth);
-void WithinFiveDegrees();
+
 int getCurrentAzimuth();
 void check_If_SlewingTargetAchieved();
 void createDataPacket();
@@ -85,6 +85,7 @@ void lightup();
 bool checkForValidAzimuth();
 
 uint16_t encoder();
+uint16_t encoder2();                // added for testing 18-12-25
 bool PowerForCamera(bool State);
 void interrupt();
 void domeSync();
@@ -148,15 +149,7 @@ long monitorTimerInterval = 0.0l; // note l after 0.0 denotes long number - same
 long azimuthTimerInterval = 0.0l;
 long LedTimerInterval     = 0.0l;
 
-// e.g. process for defining the above:
-/*
-use arduino sermon for control and comms
-start at say 270 degrees
-set stepsPerDegree = some value x (try 400) and then upload the code.
-SA90# from a known position say 270 and end up at position y - this will give a value of steps used to move the dome z = y-270 degrees
-calculate stepsPerDegree as x/ z  and ASCOM.print it
-Now set this value in the code (line 123 in this file) and try a slew from 270 to 90 (180 degrees) to see how accurate the figure is. It might need adjusting?
-*/
+
 String TargetMessage = "No Target";
 String QueryDir = "No Direction";
 String movementstate = "Not Moving";
@@ -928,4 +921,29 @@ void syncToAzimuth(int syncAzimuth)
 // Countdown function: returns absolute remaining degrees to target for display in the monitor program
 int countdown(int currentAzimuth, int targetAzimuth) {
   return abs(angularDistance(currentAzimuth, targetAzimuth));
+}
+
+uint16_t encoder2()                // added for testing 18-12-25
+{
+    // Wrap the counter into [0, ticksperDomeRev)
+    if (A_Counter < 0) {
+        A_Counter += ticksperDomeRev;
+    }
+    if (A_Counter >= ticksperDomeRev) {
+        A_Counter -= ticksperDomeRev;
+    }
+
+    // Convert ticks to degrees
+    float Azimuth = float(A_Counter) / ticksPerDegree;
+
+    // Wrap azimuth into [0, 360)
+    if (Azimuth >= 360.0f) {
+        Azimuth -= 360.0f;
+    }
+    if (Azimuth < 0.0f) {
+        Azimuth += 360.0f;
+    }
+
+    // Return integer degrees
+    return static_cast<uint16_t>(Azimuth);
 }
