@@ -121,10 +121,13 @@ AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
 uint16_t EEMEM NonVolatileParkAzimuth;
 uint16_t EEMEM NonVolatileHomeAzimuth;
+uint16_t EEMEM NonVolatileControllerSteps;
 // SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
 uint16_t SRAMHomeAzimuth;
 uint16_t SRAMParkAzimuth;
+uint16_t SRAMControllerSteps;
+
 int16_t TargetAzimuth;
 int16_t CurrentAzimuth;
 
