@@ -1,4 +1,5 @@
 /*
+comment whilst trying gitkraken
  * The code has been tested with an arduino sermon sending SA999#, SL#. With the monitor program connected it slews correctly in both directions
  * counts down to target and stops. The AI code in two routines replaces previous code in whichdirection() and the code which used CDArray as a countdown mechanism.
  * Also countdown and linkedlist.cpp are no longer used and are now removed. 
