@@ -122,12 +122,30 @@ AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
 uint16_t EEMEM NonVolatileParkAzimuth;
 uint16_t EEMEM NonVolatileHomeAzimuth;
-uint16_t EEMEM NonVolatileControllerSteps;
+
+//EEMEM vars related to motor & controller
+uint16_t EEMEM NonVolatileControllerSteps;              // dip switches currently set to 800 steps per motor shaft rev
+uint16_t EEMEM NonVolatileMotorShaftRevsPerDomeRev;     // about 34.5 shafy revs per dome rev currently Dec 2025 will fit as 345 in 16 bit int for conversion to float
+uint32_t EEMEM NonVolatileMotorStepsPerDomeDegree;      // the number of steps needed to move the Dome one degree - this is calculated in the monitor program and saved here
+                                                        // for use by slew to Azimuth it's about 76.333 and this needs to be stored as 76333 so needs uint32_t
+
+// EEPROM vars related to encoder
+uint16_t EEMEM NonVolatileEncoderTicksPerRev;           // the number of ticks for one rev of the encoder shaft
+uint16_t EEMEM NonVolatileEncoderTicksPerDomeRev;       // the number of ticks for one rev of the Dome  - currently about 20700 Dec 25
+
 // SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
 uint16_t SRAMHomeAzimuth;
 uint16_t SRAMParkAzimuth;
-uint16_t SRAMControllerSteps;
+
+// motor & Controller vars
+uint16_t SRAMControllerSteps;                           // dip switches currently set to 800 steps per motor shaft rev
+uint16_t SRAMMotorShaftRevsPerDomeRev;                  // about 34.5 shafy revs per dome rev currently Dec 2025
+float SRAMNonVolatileMotorStepsPerDomeDegree;
+
+// Encooder vars
+uint16_t SRAMEncoderTicksPerRev;                        // the number of ticks for one rev of the encoder shaft - for the current encoder it's 600
+uint16_t SRAMEncoderTicksPerDomeRev;                    // the number of ticks for one rev of the Dome - currently about 20700 Dec 25
 
 int16_t TargetAzimuth;
 int16_t CurrentAzimuth;
