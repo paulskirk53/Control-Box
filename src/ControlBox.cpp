@@ -1,4 +1,10 @@
 /*
+* When testing this code, remember the ASCOM driver queries the Azimuth via the encoder. If the encode Azimuth is not correct when a slew finishes it could be:
+* the motor steps per degree could be out
+* the encoder ticks per degree is not correct
+* It would definitely be worth testing with a stepper motor attached to the control-box simulator - attach a flag to the shaft and count the revs for a slew of 180 degrees
+* - it should be 34.5 / 2 If that's good, dome test should be good too
+* 
 comment whilst trying gitkraken
  * The code has been tested with an arduino sermon sending SA999#, SL#. With the monitor program connected it slews correctly in both directions
  * counts down to target and stops. The AI code in two routines replaces previous code in whichdirection() and the code which used CDArray as a countdown mechanism.
@@ -95,45 +101,47 @@ void syncToAzimuth(int syncAzimuth);
 
 // end declarations
 // defines for the encoder inclusion
-#define power_pin 2   
-#define A_PHASE 4      // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
-#define B_PHASE 5
-#define CameraPower 6  // power for the imaging camera
-#define dirPin 10      // connection for motor direction signal
-#define stepPin 11     // connection for motor step signal
+#define power_pin   2   
+#define A_PHASE     4      // USES PINS 4 AND 5 for encoder interrupt - check that these pins will work as interrupts
+#define B_PHASE     5
 
+#define CameraPower 6      // power for the imaging camera
 
-#define WestPin 29     // sync connection for dome
-//
+#define dirPin     10      // connection for motor direction signal
+#define stepPin    11      // connection for motor step signal
+
+#define WestPin    29      // sync connection for dome
+
+#define ledpin     23
+
 #define off false
 #define on true
 
 // meaningful names for the serial ports
 #define Monitor Serial2
-#define ASCOM Serial
+#define ASCOM   Serial
 
-#define ledpin 23  
+
 
 // Define a stepper and the pins it will use
 
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
-// EEPROM vars for storing the Azimuths
-uint16_t EEMEM NonVolatileEncoderTicksPerDomeRev;       // the number of ticks for one rev of the Dome  - currently about 20700 Dec 25
-uint16_t EEMEM NonVolatileEncoderTicksPerRev;           // the number of ticks for one rev of the encoder shaft
+
 // EEPROM vars related to encoder
+uint16_t EEMEM EPROMEncoderTicksPerDomeRev;       // the number of ticks for one rev of the Dome  - currently about 20700 Dec 25
+uint16_t EEMEM EPROMEncoderTicksPerRev;           // the number of ticks for one rev of the encoder shaft - 600 currently
 
-                                                        // for use by slew to Azimuth it's about 76.333 and this needs to be stored as 76333 so needs uint32_t
-uint32_t EEMEM NonVolatileMotorStepsPerDomeDegree;      // the number of steps needed to move the Dome one degree - this is calculated in the monitor program and saved here
-uint16_t EEMEM NonVolatileMotorShaftRevsPerDomeRev;     // about 34.5 shafy revs per dome rev currently Dec 2025 will fit as 345 in 16 bit int for conversion to float
-uint16_t EEMEM NonVolatileControllerSteps;              // dip switches currently set to 800 steps per motor shaft rev
+// EEPROM vars related to motor/ controller       // for use by slew to Azimuth it's about 76.333 and this needs to be stored as 76333 so needs uint32_t
+uint32_t EEMEM EPROMMotorStepsPerDomeDegree;      // the number of steps needed to move the Dome one degree - this is calculated in the monitor program and saved here
+uint16_t EEMEM EPROMMotorShaftRevsPerDomeRev;     // about 34.5 shafy revs per dome rev currently Dec 2025 will fit as 345 in 16 bit int for conversion to float
+uint16_t EEMEM EPROMControllerSteps;              // dip switches currently set to 800 steps per motor shaft rev
 
-uint16_t EEMEM NonVolatileHomeAzimuth;
-uint16_t EEMEM NonVolatileParkAzimuth;
-uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
+// EEPROM vars for storing the Azimuths
 uint16_t EEMEM EPROMHomeAzimuth;
 uint16_t EEMEM EPROMParkAzimuth;
 uint16_t EEMEM EPROMAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
+
 // SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
 uint16_t SRAMHomeAzimuth;
@@ -142,7 +150,7 @@ uint16_t SRAMParkAzimuth;
 // motor & Controller vars
 uint16_t SRAMControllerSteps;                           // dip switches currently set to 800 steps per motor shaft rev
 uint16_t SRAMMotorShaftRevsPerDomeRev;                  // about 34.5 shafy revs per dome rev currently Dec 2025
-float SRAMNonVolatileMotorStepsPerDomeDegree;
+float SRAMMotorStepsPerDomeDegree;                      //data type important for calculation
 
 // Encooder vars
 uint16_t SRAMEncoderTicksPerRev;                        // the number of ticks for one rev of the encoder shaft - for the current encoder it's 600
@@ -238,7 +246,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(WestPin), domeSync, FALLING);    // the sync line is high until the magnet arrives when it falls,
 
 
-
+// initialise the SRAM vars by reading from EEPROM
 SRAMAzimuth     = eeprom_read_word(&EPROMAzimuth);
 SRAMParkAzimuth = eeprom_read_word(&EPROMParkAzimuth );
 SRAMHomeAzimuth = eeprom_read_word(&EPROMHomeAzimuth );
@@ -306,7 +314,7 @@ void loop()
   {
     String monitorReceipt = Monitor.readStringUntil('#');
 
-    if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet 
+    if (monitorReceipt.equals("dataRequest") )   // request for data packet 
     {
       
       Monitor.print(dataPacket);   // send the requested datapacket to the monitor program
@@ -320,7 +328,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("monitorcontrol", 0) > -1)   // MCU id request at time of connection
+    else if (monitorReceipt.equals("monitorcontrol") )   // MCU id request at time of connection
     {
       Monitor.print("monitorcontrol#");
       // this is a connect request, so set the dome azimuth value (because users are allowed to change it as part of disconnect functionality)
@@ -335,7 +343,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
+    else if (monitorReceipt.equals("reset") )     // reset the control box MCU
     {
       Monitor.print("resetting");
       // preserve  the dome azimuth 
@@ -352,13 +360,13 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("CAMON", 0) > -1)     // turn imaging camera power on
+    else if (monitorReceipt.equals("CAMON") )     // turn imaging camera power on
     {
        PowerForCamera(on);
        //Monitor.print("rec'd camon");
     }
 
-    else if (monitorReceipt.indexOf("CAMOFF", 0) > -1)     // turn imaging camera power off
+    else if (monitorReceipt.equals("CAMOFF"))     // turn imaging camera power off
     {
        PowerForCamera(off);
        //Monitor.print("rec'd camOFF");
@@ -386,7 +394,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("SH", 0) > -1)   // 
+    else if (monitorReceipt.indexOf("SH", 0) > -1)   // Set Home
     {      
       monitorReceipt.remove(0,2);
       SRAMHomeAzimuth= monitorReceipt.toInt();
@@ -400,7 +408,7 @@ void loop()
       }
       
     }
-    else if (monitorReceipt.indexOf("SP", 0) > -1)   // 
+    else if (monitorReceipt.indexOf("SP", 0) > -1) //  Set Park
     {      
       monitorReceipt.remove(0,2);
       SRAMParkAzimuth= monitorReceipt.toInt();
