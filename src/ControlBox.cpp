@@ -105,9 +105,9 @@ void syncToAzimuth(int syncAzimuth);
 AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin, true);
 
 // EEPROM vars for storing the Azimuths
-uint16_t EEMEM NonVolatileAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
-uint16_t EEMEM NonVolatileParkAzimuth;
-uint16_t EEMEM NonVolatileHomeAzimuth;
+uint16_t EEMEM EPROMAzimuth;   // use of EEMEM means addresses of data values do not need to be managed manually
+uint16_t EEMEM EPROMParkAzimuth;
+uint16_t EEMEM EPROMHomeAzimuth;
 // SRAM Vars paired to the above 
 uint16_t SRAMAzimuth;
 uint16_t SRAMHomeAzimuth;
@@ -191,9 +191,9 @@ void setup()
 
 
 
-SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
-SRAMParkAzimuth = eeprom_read_word(&NonVolatileParkAzimuth );
-SRAMHomeAzimuth = eeprom_read_word(&NonVolatileHomeAzimuth );
+SRAMAzimuth     = eeprom_read_word(&EPROMAzimuth);
+SRAMParkAzimuth = eeprom_read_word(&EPROMParkAzimuth );
+SRAMHomeAzimuth = eeprom_read_word(&EPROMHomeAzimuth );
 
 
 
@@ -274,7 +274,7 @@ void loop()
     {
       Monitor.print("monitorcontrol#");
       // this is a connect request, so set the dome azimuth value (because users are allowed to change it as part of disconnect functionality)
-      SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);   
+      SRAMAzimuth     = eeprom_read_word(&EPROMAzimuth);   
        A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
        TargetAzimuth = getCurrentAzimuth( );  //set target azimuth the same as current azimuth so no slew occurs on connection
     }
@@ -289,7 +289,7 @@ void loop()
     {
       Monitor.print("resetting");
       // preserve  the dome azimuth 
-      eeprom_update_word(&NonVolatileAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM i.e state is preserved on user requested reset
+      eeprom_update_word(&EPROMAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM i.e state is preserved on user requested reset
       
 
       delay(1000);   //
@@ -318,14 +318,14 @@ void loop()
     else if (monitorReceipt.equals("keepaz"))  //.indexOf("keepaz", 0) > -1)   
     {      
       int16_t az = getCurrentAzimuth();                                                     
-      eeprom_update_word(&NonVolatileAzimuth, az);
+      eeprom_update_word(&EPROMAzimuth, az);
       
     }
   
     else if (monitorReceipt.equals("nokeepaz"))   
     {      
                                                        
-      eeprom_update_word(&NonVolatileAzimuth, SRAMParkAzimuth); //store the current park azimuth in the eeprom
+      eeprom_update_word(&EPROMAzimuth, SRAMParkAzimuth); //store the current park azimuth in the eeprom
     }
 
     // December 2025, adding in a monitor receipt of SH,SP, GH, GP (set home, set park, get home, get park)
@@ -342,11 +342,11 @@ void loop()
       SRAMHomeAzimuth= monitorReceipt.toInt();
       if ( (SRAMHomeAzimuth >= 0) && (SRAMHomeAzimuth <=360) )
       {
-        eeprom_update_word(&NonVolatileHomeAzimuth, SRAMHomeAzimuth);  
+        eeprom_update_word(&EPROMHomeAzimuth, SRAMHomeAzimuth);  
       }
       else
       {
-        eeprom_update_word(&NonVolatileHomeAzimuth, 0);   //if a valid azimuth wasn't received, set the home position to 0
+        eeprom_update_word(&EPROMHomeAzimuth, 0);   //if a valid azimuth wasn't received, set the home position to 0
       }
       
     }
@@ -356,11 +356,11 @@ void loop()
       SRAMParkAzimuth= monitorReceipt.toInt();
       if ( (SRAMParkAzimuth >= 0) && (SRAMParkAzimuth <=360) )
       {
-        eeprom_update_word(&NonVolatileParkAzimuth, SRAMParkAzimuth);  
+        eeprom_update_word(&EPROMParkAzimuth, SRAMParkAzimuth);  
       }
       else
       {
-        eeprom_update_word(&NonVolatileParkAzimuth, 0);   //if a valid azimuth wasn't received, set the park position to 0
+        eeprom_update_word(&EPROMParkAzimuth, 0);   //if a valid azimuth wasn't received, set the park position to 0
       }
       
     }
@@ -373,14 +373,14 @@ void loop()
 
     else if (monitorReceipt.indexOf("GP", 0) > -1)   // 
     {
-      uint16_t pa =  eeprom_read_word(&NonVolatileParkAzimuth );
+      uint16_t pa =  eeprom_read_word(&EPROMParkAzimuth );
       
       Monitor.print(String(pa)+"#");
     }
 
     else if (monitorReceipt.indexOf("GH", 0) > -1)   // 
     {
-      uint16_t ha =  eeprom_read_word(&NonVolatileHomeAzimuth );
+      uint16_t ha =  eeprom_read_word(&EPROMHomeAzimuth );
       
       Monitor.print(String(ha)+"#");
     }
@@ -427,7 +427,7 @@ void loop()
     {
       ASCOM.print("controlbox#");
       // this is a connection request so set the azimuth by reading from eeprom
-       SRAMAzimuth     = eeprom_read_word(&NonVolatileAzimuth);
+       SRAMAzimuth     = eeprom_read_word(&EPROMAzimuth);
        A_Counter = ticksperDomeRev / (360.0 / SRAMAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
        TargetAzimuth = getCurrentAzimuth( );  //set target azimuth the same as current azimuth so no slew occurs on connection
     }
