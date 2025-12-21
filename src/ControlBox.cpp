@@ -197,7 +197,7 @@ SRAMHomeAzimuth = eeprom_read_word(&EPROMHomeAzimuth );
 
 
 
-    // set the dome azimuth to the park position of the dome - this is where scope and dome align for the initialisation
+    // set the dome azimuth to the park position of the dome AT STARTUP - this is where scope and dome align for the initialisation
     A_Counter = ticksperDomeRev / (360.0 / SRAMParkAzimuth); //  the position where the scope and dome see eye to eye when the scope and dome are parked
   
 
