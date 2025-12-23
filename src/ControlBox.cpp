@@ -688,7 +688,7 @@ void loop()
 
     // create / update the data packet for monitoring program
     //
-    if ((millis() - monitorTimerInterval) > 1000.0) // one second checks for azimuth value as the dome moves and tick the heartbeat LED
+    if ((millis() - monitorTimerInterval) > 2000.0) // one second checks for azimuth value as the dome moves and tick the heartbeat LED
     {
       
       createDataPacket();
