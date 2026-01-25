@@ -256,13 +256,21 @@ void loop()
 
   if (Monitor.available() > 0)
   {
-    String monitorReceipt = Monitor.readStringUntil('#');
 
+        
+    String monitorReceipt = Monitor.readStringUntil('#');
+    //ASCOM.println("Monitor received " + monitorReceipt);      // debug only
+   
     if (monitorReceipt.indexOf("dataRequest", 0) > -1)   // request for data packet 
     {
       Monitor.print(dataPacket);
+       if (TargetMessage=="Target achieved ")   // check the target has been achieved and send a message to monitor to indicate slew end.
+    {
+      Monitor.print("SLEW:slew-end#");
+      TargetMessage="Target Achieved";       // change target message slightly so we don't repeatedly send slew-end
     }
-    
+    }
+
 
     //*************************************************************************
     //******** code for Monitor MCU Identity process below **********************
@@ -287,7 +295,7 @@ void loop()
 
     else if (monitorReceipt.indexOf("reset", 0) > -1)     // reset the control box MCU
     {
-      Monitor.print("resetting");
+      Monitor.print("resetting#");
       // preserve  the dome azimuth 
       eeprom_update_word(&EPROMAzimuth, getCurrentAzimuth());  // write the current azimuth value to EEPROM i.e state is preserved on user requested reset
       
@@ -336,31 +344,35 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (monitorReceipt.indexOf("SH", 0) > -1)   // 
+    else if (monitorReceipt.startsWith("SH") )   // 
     {      
       monitorReceipt.remove(0,2);
       SRAMHomeAzimuth= monitorReceipt.toInt();
       if ( (SRAMHomeAzimuth >= 0) && (SRAMHomeAzimuth <=360) )
       {
         eeprom_update_word(&EPROMHomeAzimuth, SRAMHomeAzimuth);  
+        //ASCOM.println("The Home azimuth was written to eeprom "+ String (SRAMHomeAzimuth));  // for debug only
       }
       else
       {
         eeprom_update_word(&EPROMHomeAzimuth, 0);   //if a valid azimuth wasn't received, set the home position to 0
+        //ASCOM.println("The Home azimuth has NOT been written to eeprom "+ String (SRAMHomeAzimuth));  // for debug only
       }
       
     }
-    else if (monitorReceipt.indexOf("SP", 0) > -1)   // 
+    else if (monitorReceipt.startsWith("SP") )   // 
     {      
       monitorReceipt.remove(0,2);
       SRAMParkAzimuth= monitorReceipt.toInt();
       if ( (SRAMParkAzimuth >= 0) && (SRAMParkAzimuth <=360) )
       {
         eeprom_update_word(&EPROMParkAzimuth, SRAMParkAzimuth);  
+        //ASCOM.println("The park azimuth was written to eeprom "+ String (SRAMParkAzimuth));  // for debug only
       }
       else
       {
         eeprom_update_word(&EPROMParkAzimuth, 0);   //if a valid azimuth wasn't received, set the park position to 0
+        //ASCOM.println("The park azimuth has NOT been written to eeprom "+ String (SRAMParkAzimuth));  // for debug only
       }
       
     }
@@ -371,18 +383,20 @@ void loop()
     //***************************************************************************
     //***************************************************************************
 
-    else if (monitorReceipt.indexOf("GP", 0) > -1)   // 
+    else if (monitorReceipt.equals("GP"))   // 
     {
       uint16_t pa =  eeprom_read_word(&EPROMParkAzimuth );
       
-      Monitor.print(String(pa)+"#");
+      Monitor.print("PARK:" + String(pa)+"#");
+      //ASCOM.println("the get park value is " + String(pa) );
     }
 
-    else if (monitorReceipt.indexOf("GH", 0) > -1)   // 
+    else if (monitorReceipt.equals("GH"))   // 
     {
       uint16_t ha =  eeprom_read_word(&EPROMHomeAzimuth );
       
-      Monitor.print(String(ha)+"#");
+      Monitor.print("HOME:" + String(ha)+"#");
+      //ASCOM.println("the get Home value is " + String(ha) );
     }
 
 
@@ -408,7 +422,7 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    if (receivedData.indexOf("AZ", 0) > -1)
+    if (receivedData.equals("AZ") )
     {
 
       String x = (String) getCurrentAzimuth();
@@ -423,7 +437,7 @@ void loop()
     //**** Used by the ASCOM driver to identify the COM port in use. **********
     //*************************************************************************
     //*************************************************************************
-    else if (receivedData.indexOf("controlbox", 0) > -1 || receivedData.indexOf("identify", 0) > -1)
+    else if (receivedData.equals("controlbox") || receivedData.equals("identify"))
     {
       ASCOM.print("controlbox#");
       // this is a connection request so set the azimuth by reading from eeprom
@@ -432,18 +446,14 @@ void loop()
        TargetAzimuth = getCurrentAzimuth( );  //set target azimuth the same as current azimuth so no slew occurs on connection
     }
 
-   //  else if (receivedData.indexOf("controlbox", 0) > -1  )
-   //  {
-   //    ASCOM.print("controlbox#");
-   //  }
-
+  
     //*************************************************************************
     //******** code for emergency stop process below **************************
     //********            data sent by ASCOM driver ES#         ***************
     //*************************************************************************
     //*************************************************************************
 
-    else if (receivedData.indexOf("ES", 0) > -1) // Emergency stop requested from C# driver
+    else if (receivedData.equals("ES")) // Emergency stop requested from C# driver
     {
       // lcd.clear();
       Emergency_Stop(CurrentAzimuth, "Received ES");
@@ -456,12 +466,14 @@ void loop()
     //*************************************************************************
     //*************************************************************************
 
-    else if (receivedData.indexOf("SA", 0) > -1) //
+    else if (receivedData.startsWith("SA")) //
     {
 
       domePowerOn(); // turn on the power supply for the stepper motor
       // strip off 1st 2 chars
       receivedData.remove(0, 2);
+      
+      Monitor.print("SLEW:slew-start#");
 
       TargetAzimuth = receivedData.toInt(); // store the target azimuth for comparison with current position
       // the way the code works is to treat a rrquest for az = 360 as az =0 , hence the if clause below
@@ -516,7 +528,7 @@ void loop()
     //**********************************************************
     //
 
-    else if (receivedData.indexOf("SL", 0) > -1) //
+    else if (receivedData.equals("SL")) //
     {
 
       if (Slewing | homing)
@@ -538,7 +550,7 @@ void loop()
     //*************************************************************
     //*************************************************************
 
-    else if (receivedData.indexOf("FH", 0) > -1)
+    else if (receivedData.equals("FH"))
     {
        StepsPerSecond = 300.0;                 // changed following empirical testing Oct 2020
        normalAcceleration = 140.0;             // changed following empirical testing October 17th 2020 - changed from 40 to 20 for trial
@@ -567,7 +579,7 @@ void loop()
     //************************************************************
     //************************************************************
 
-    else if (receivedData.indexOf("STA", 0) > -1)
+    else if (receivedData.startsWith("STA"))
       {
         int syncAzimuth;
         receivedData.remove(0, 3);           //strip off the first three characters as they are not numeric
@@ -641,7 +653,7 @@ if (homing)
 
 //end
 
-
+    
 
 } // end void Loop //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -725,6 +737,8 @@ void check_If_SlewingTargetAchieved()
      // Monitor.println(x);
       Slewing = false;              // used to stop the motor in main loop
       movementstate = "Stopped.  "; // for updating the lcdpanel
+      
+     // Monitor.print("SLEW:slew-end#");
 
       // Serial.print("ABS STEPPER distance to go....");
       // Serial.println();
@@ -752,7 +766,7 @@ void createDataPacket()
       
   //eight items below
   // dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
-  dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
+  dataPacket = "DP:" + String(CurrentAzimuth) + ',' + String(TargetAzimuth) + ',' + movementstate + ',' + QueryDir + ',' + TargetMessage + ',' + String(CDArray[CurrentAzimuth]) + ',' + String(cameraPowerState) + ',' +String(syncCount) + ',' + '#';
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
