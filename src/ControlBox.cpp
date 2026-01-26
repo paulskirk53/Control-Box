@@ -1,29 +1,9 @@
 /*
-just a comment to visualise on gitkraken
+this version of the code has been modified on 26th Jan 2026 to change the way the angukar distance to target is calculated
+This is much simpler now. Also the direction of travel computation for the slew is remodelled.
+Tested at home with simulator control box on 26th Jan 2026. Carried out various slews in different directions and watched results in the monitor program
+All seems weel - trial at observatory next
 
-NOte re encoder calibration:
-see this spreadsheet for calcuations of ticks per dome revolution - google sheets 'encoder ticks per dome rev'
-
-Next steps: 
-1 - put together a data packet for transmission to the monitor on receipt of a request. The packet is updated once per sec in the monitortimerinterval() routine - done
-    the packet is assembled using global vars which are uodated as any of the data items below are changed 
-    The monitor program informs the data which is needed in the packet
-    the target az -     targetazimuth
-    movement direction  querydir   
-    movement status     movementstate
-    target status?      targetmessage
-    Degrees to target   String(CDArray[CurrentAzimuth])
-    Dome Azimuth        getcurrentazimuth()  ??
-    Camera power state  cameraPowerState
-
-2 - look through the code to identify receipts and transmissions related to the two datastreams - ASCOM and MONITOR - done
-
-Note Note Note Note Note Note
-
-This project is the Code for the new (1-5-23) control box (stepper and encoder functions) on one AVR4809 chip
-
-
-Note Note Note Note Note Note
 */
 
 /*
@@ -39,9 +19,9 @@ AVR4809 pinout for the control box - see the mailbox sheet
 // see this sheets URL for values related to deceleration used to inform values in this code
 // https://docs.google.com/spreadsheets/d/1IBvHXLke9fBvjETHgyCWAYHGpPX9WbbuqvsiXYv9Ix0/edit#gid=0
 
-// verion 6.0 - change the variable in setup too
+
 // DECELVALUE AND NORMALACCELERATION LOOK GOOD
-//  check the final moveto values as they may need empirical change on testing
+
 //  This routine accepts these commands from the ASCOM Driver via USB Serial Cable:
 //
 // ES# - emergency stop
@@ -55,7 +35,7 @@ AVR4809 pinout for the control box - see the mailbox sheet
 #include <Arduino.h>
 #include <avr/cpufunc.h> /* Required header file for wdt resets*/
 #include <AccelStepper.h>
-#include "linkedList.h"
+//#include "linkedList.h"
 #include <avr/eeprom.h>
 
 // Forward declarations
@@ -71,6 +51,8 @@ void domePowerOff();
 void resetViaSWR();
 void lightup();
 bool checkForValidAzimuth();
+int angularDistance(int from, int to) ;
+int countdown(int currentAzimuth, int targetAzimuth) ;
 
 uint16_t encoder();
 bool PowerForCamera(bool State);
@@ -125,6 +107,8 @@ boolean TargetChanged = false;
 boolean monitorSendFlag = false; // this only becomes true after the MCU is connected successfully and when true, the data stream to the monitor program is enabled
 float normalAcceleration;        // was incorrectly set to data type int
 
+int CurrentAzimuth;
+int TargetAzimuth;
 int stepsToTarget = 0;
 int DecelValue = 400;            // set at this value of 800 after empirical test Oct 2020. Update April 22 with Pulsar dome this may need to be halved to 400 
 int EncoderReplyCounter = 0;
@@ -237,7 +221,7 @@ SRAMHomeAzimuth = eeprom_read_word(&EPROMHomeAzimuth );
 
   TargetAzimuth = getCurrentAzimuth(); // shuld really check that a valid azimuth is returned
 
-  initialiseCDArray();
+  //initialiseCDArray();
 
   
 } // end setup
@@ -673,23 +657,34 @@ String WhichDirection()
   // optimises battery use by the motor.
 
   CurrentAzimuth = getCurrentAzimuth(); // this comes from the encoder
-  // azimuth = CurrentAzimuth;          //save this to work out the distance to go
-  int clockwiseSteps = calculateClockwiseSteps();
-  int antiClockwiseSteps = 360 - clockwiseSteps;
-
-  if (clockwiseSteps <= antiClockwiseSteps)
-  {
-    stepsToTarget = clockwiseSteps; // used to define the number of items in the countdown array
-    countDown("clockwise");         // populate the cdarray with the smaller number of steps
-    return "clockwise";
-  }
-  else
-  {
-    stepsToTarget = antiClockwiseSteps; // used to define the number of items in the countdown array
-    countDown("anticlockwise");         // populate the cdarray with the smaller number of steps
-    return "anticlockwise";
-  }
+  int direction = angularDistance(CurrentAzimuth,TargetAzimuth);
+  if (direction >=0)
+   {
+      return "clockwise";
+   } 
+   else
+   {
+     return "anticlockwise";
+   }
+  
 }
+
+// Countdown function: returns absolute remaining degrees to target for display in the monitor program
+int countdown(int currentAzimuth, int targetAzimuth) 
+{
+  return abs(angularDistance(currentAzimuth, targetAzimuth));
+}
+
+// Compute shortest angular distance (signed: +CW, -CCW) - helper for whichdirection()
+int angularDistance(int from, int to) 
+{
+  int diff = (to - from + 360) % 360;
+  if (diff > 180) diff -= 360; // choose shortest direction
+  return diff;
+}
+
+
+
 
 void WithinFiveDegrees()
 {
@@ -763,10 +758,10 @@ void createDataPacket()
 {
   
   CurrentAzimuth = getCurrentAzimuth(); 
-      
+  int remaining  = countdown(CurrentAzimuth,TargetAzimuth);    
   //eight items below
   // dataPacket = String(CurrentAzimuth) + '#' + String(TargetAzimuth) + '#' + movementstate + '#' + QueryDir + '#' + TargetMessage + '#' + String(CDArray[CurrentAzimuth]) + '#' + String(cameraPowerState) + '#' +String(syncCount) + '#' + '$';
-  dataPacket = "DP:" + String(CurrentAzimuth) + ',' + String(TargetAzimuth) + ',' + movementstate + ',' + QueryDir + ',' + TargetMessage + ',' + String(CDArray[CurrentAzimuth]) + ',' + String(cameraPowerState) + ',' +String(syncCount) + ',' + '#';
+  dataPacket = "DP:" + String(CurrentAzimuth) + ',' + String(TargetAzimuth) + ',' + movementstate + ',' + QueryDir + ',' + TargetMessage + ',' + String(remaining) + ',' + String(cameraPowerState) + ',' +String(syncCount) + ',' + '#';
   //                  dome azimuth,                  target azimuth,        movementstate,       querydir,         targetmessage,               cdarray[currentazimut] ,                cameraPowerState
   //note the string item delimiter is # 
   //note the string delimiter is $
